@@ -1,0 +1,7 @@
+POST http://localhost:8000/getproduk
+Content-Type: application/json
+
+# {
+#   "param1": "value1",
+#   "param2": "value2"
+# }
