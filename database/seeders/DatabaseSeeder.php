@@ -27,11 +27,11 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'test@example.com',
         // ]);
 
-        // User::create([
-        //     'name' => 'Arfenaz',
-        //     'email' => 'admin@gmail.com',
-        //     'password' => Hash::make('12345'),
-        // ]);
+        User::create([
+            'name' => 'Arfenaz',
+            'email' => 'admin@gmail.com',
+            'password' => Hash::make('12345'),
+        ]);
 
         Provider::create([
             'name' => 'AXIS',
@@ -65,66 +65,66 @@ class DatabaseSeeder extends Seeder
             'logo' => 'https://api.unsplash.com/photos?query=random'
         ]);
 
-        // GamesCategory::create([
-        //     'name' => 'MOBILE LEGENDS',
-        //     'slug' => 'mobile-legends',
-        //     'photo' => 'https://api.unsplash.com/photos?query=random'
-        // ]);
+        GamesCategory::create([
+            'name' => 'MOBILE LEGENDS',
+            'slug' => 'mobile-legends',
+            'logo' => 'https://api.unsplash.com/photos?query=random'
+        ]);
 
-        // Tagihan::create([
-        //     'name' => 'PLN',
-        //     'slug' => 'pln',
-        //     'photo' => 'https://api.unsplash.com/photos/mount'
-        // ]);
+        Tagihan::create([
+            'name' => 'PLN',
+            'slug' => 'pln',
+            'logo' => 'https://api.unsplash.com/photos/mount'
+        ]);
         
-            // PaymentMethod::create([
-            //     'name' => 'bca',
-            //     'nominal_fee' => 1500,
-            //     'percentase_fee' => 0.0,
-            //     'type' => 'bank_transfer',
-            //     'status' => 'off',
-            // ]);
-            // PaymentMethod::create([
-            //     'name' => 'qris',
-            //     'nominal_fee' => 0,
-            //     'percentase_fee' => 0.7,
-            //     'type' => 'qris',
-            //     'status' => 'off',
-            // ]);
-            // PaymentMethod::create([
-            //     'name' => 'bni',
-            //     'nominal_fee' => 4000,
-            //     'percentase_fee' => 0,
-            //     'type' => 'bank_transfer',
-            //     'status' => 'on',
-            // ]);
-            // PaymentMethod::create([
-            //     'name' => 'bri',
-            //     'nominal_fee' => 4000,
-            //     'percentase_fee' => 0,
-            //     'type' => 'bank_transfer',
-            //     'status' => 'on',
-            // ]);
-            // PaymentMethod::create([
-            //     'name' => 'gopay',
-            //     'nominal_fee' => 4000,
-            //     'percentase_fee' => 0,
-            //     'type' => 'ewallet',
-            //     'status' => 'on',
-            // ]);
-            // PaymentMethod::create([
-            //     'name' => 'shopeepay',
-            //     'nominal_fee' => 4000,
-            //     'percentase_fee' => 0,
-            //     'type' => 'ewallet',
-            //     'status' => 'off',
-            // ]);
-            // PaymentMethod::create([
-            //     'name' => 'dana',
-            //     'nominal_fee' => 4000,
-            //     'percentase_fee' => 0,
-            //     'type' => 'ewallet',
-            //     'status' => 'off',
-            // ]);
+            PaymentMethod::create([
+                'name' => 'bca',
+                'nominal_fee' => 1500,
+                'percentase_fee' => 0.0,
+                'type' => 'bank_transfer',
+                'status' => 'off',
+            ]);
+            PaymentMethod::create([
+                'name' => 'qris',
+                'nominal_fee' => 0,
+                'percentase_fee' => 0.7,
+                'type' => 'qris',
+                'status' => 'off',
+            ]);
+            PaymentMethod::create([
+                'name' => 'bni',
+                'nominal_fee' => 4000,
+                'percentase_fee' => 0,
+                'type' => 'bank_transfer',
+                'status' => 'on',
+            ]);
+            PaymentMethod::create([
+                'name' => 'bri',
+                'nominal_fee' => 4000,
+                'percentase_fee' => 0,
+                'type' => 'bank_transfer',
+                'status' => 'on',
+            ]);
+            PaymentMethod::create([
+                'name' => 'gopay',
+                'nominal_fee' => 4000,
+                'percentase_fee' => 0,
+                'type' => 'ewallet',
+                'status' => 'on',
+            ]);
+            PaymentMethod::create([
+                'name' => 'shopeepay',
+                'nominal_fee' => 4000,
+                'percentase_fee' => 0,
+                'type' => 'ewallet',
+                'status' => 'off',
+            ]);
+            PaymentMethod::create([
+                'name' => 'dana',
+                'nominal_fee' => 4000,
+                'percentase_fee' => 0,
+                'type' => 'ewallet',
+                'status' => 'off',
+            ]);
     }
 }

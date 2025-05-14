@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\DigiflazzTopup;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -61,7 +62,7 @@ class MidtransController extends Controller
 
             if ($response->successful()) {
                 $responseData = $response->json();
-
+                $status = 'pending';
                 $trans = Transaction::create([
                     'product_id' => $request->input('id'),
                     'product_name' => $request->input('product_name'),
@@ -71,7 +72,7 @@ class MidtransController extends Controller
                     'order_id' => $orderId,
                     'gross_amount' => $grossAmount,
                     'transaction_id' => $responseData['transaction_id'] ?? null,
-                    'transaction_status' => 'pending',
+                    'payment_status' => $status,
                     'payment_type' => $request->input('payment_type'),
                     'status_message' => $responseData['status_message'],
                     'payment_method_name' => $paymentMethod,
@@ -83,7 +84,8 @@ class MidtransController extends Controller
 
                 return response()->json([
                     'message' => 'Payment created',
-                    'data' => $responseData
+                    'data' => $responseData,
+                    'transaksi' => $trans
                 ]);
             } else {
                 return response()->json([
@@ -141,15 +143,16 @@ class MidtransController extends Controller
                 case 'settlement':
                 $order->payment_status = 'settlement';
 
-                $digiflazzResponse = app('App\Http\Controllers\DigiflazzController')->topup($orderId);
+                // $digiflazzResponse = app('App\Http\Controllers\DigiflazzController')->topup($orderId);
+                DigiflazzTopup::dispatch($order);
 
-                $responseData = json_decode($digiflazzResponse, true);
-                if (($responseData['data']['rc'] ?? null) == '00') {
-                    Cache::forget('transkey_' . $orderId); // hapus cache jika sukses
-                    Log::info("Topup success for order {$orderId}, cache removed.");
-                } else {
-                    Log::warning("Topup failed for order {$orderId}, will keep cache for retry.");
-                }
+                // $responseData = json_decode($digiflazzResponse, true);
+                // if (($responseData['data']['rc'] ?? null) == '00') {
+                //     Cache::forget('transkey_' . $orderId); // hapus cache jika sukses
+                //     Log::info("Topup success for order {$orderId}, cache removed.");
+                // } else {
+                //     Log::warning("Topup failed for order {$orderId}, will keep cache for retry.");
+                // }
 
                 $order->save();
                 break;
@@ -188,7 +191,8 @@ class MidtransController extends Controller
             'status' => $transaction->payment_status,
             'message' => $transaction->status_message,
             'payment_type' => $transaction->payment_type,
-            'updated_at' => $transaction->updated_at
+            'updated_at' => $transaction->updated_at,
+            'transaction' => $transaction,
         ]);
     }
 }
