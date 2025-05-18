@@ -102,7 +102,7 @@ export default function History({ data }) {
                         <div className="flex items-center justify-center">
                             <span className="text-gray-700 font-medium mr-2">
                                 {data.payment_type === "bank_transfer" &&
-                                    data.va_numbers[0].va_number}
+                                    data.url}
                             </span>
                             <button
                                 className="p-1 text-blue-600 hover:text-blue-800"
@@ -133,7 +133,7 @@ export default function History({ data }) {
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Produk</span>
                                 <span className="font-medium text-gray-800">
-                                    {transaction.product}
+                                    {data.product_name}
                                 </span>
                             </div>
                             <div className="flex justify-between">
@@ -141,7 +141,7 @@ export default function History({ data }) {
                                     Nomor Tujuan
                                 </span>
                                 <span className="font-medium text-gray-800">
-                                    {transaction.number}
+                                    {data.customer_no}
                                 </span>
                             </div>
                             <div className="flex justify-between">
@@ -154,24 +154,21 @@ export default function History({ data }) {
                                 <span className="text-gray-600">
                                     Metode Pembayaran
                                 </span>
-                                <span className="font-medium text-gray-800">
+                                <span className="font-medium text-gray-800 uppercase">
                                     {data.payment_type === "bank_transfer"
-                                        ? data.va_numbers[0].bank
+                                        ? data.payment_method_name
                                         : data.payment_type}
                                 </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Status</span>
-                                <span className="font-medium text-green-500">
+                                <span className="font-medium text-green-500 uppercase">
                                     {status}
                                 </span>
                             </div>
                             <div>
                                 {data.payment_type !== "bank_transfer" && (
-                                    <img
-                                        src={data.actions[0].url}
-                                        className="w-60"
-                                    />
+                                    <img src={data.url} className="w-60" />
                                 )}
                             </div>
                         </div>
@@ -225,10 +222,10 @@ export default function History({ data }) {
                 </div>
                 {/* Receipt Actions */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                    <button className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-sm hover:bg-gray-50">
+                    {/* <button className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-sm hover:bg-gray-50">
                         <Download size={24} className="text-blue-600 mb-2" />
                         <span className="text-sm font-medium">Unduh Bukti</span>
-                    </button>
+                    </button> */}
                     {/* <button className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-sm hover:bg-gray-50">
                         <Share2 size={24} className="text-blue-600 mb-2" />
                         <span className="text-sm font-medium">Bagikan</span>

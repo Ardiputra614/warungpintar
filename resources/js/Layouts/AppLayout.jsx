@@ -1,3 +1,4 @@
+import Footer from "@/Components/Footer";
 import Navbar from "@/Components/Home/Navbar";
 import { Link } from "@inertiajs/react";
 import {
@@ -11,9 +12,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-export default function AppLayout({ user, header, children }) {
+export default function AppLayout({ user, header, aplikasi, children }) {
     const [balance, setBalance] = useState(1500000);
-
+    console.log(children);
     return (
         <div className="min-h-screen bg-amber-50">
             <Navbar />
@@ -82,6 +83,8 @@ export default function AppLayout({ user, header, children }) {
                     </Link>
                 </div>
             </nav> */}
+
+            <Footer aplikasi={aplikasi} />
         </div>
     );
 }

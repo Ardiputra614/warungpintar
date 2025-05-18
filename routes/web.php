@@ -25,25 +25,30 @@ use Inertia\Inertia;
 |
 */
 Route::get('/test-queue', function () {
-    DigiflazzTopup::dispatch();
+    $order = [
+        'nama' => 'Ardianto',
+        'profesi' => 'programer'
+    ];
+    DigiflazzTopup::dispatch($order);
     return 'Job dikirim!';
 });
 
 // Route::get('/', [HomeController::class, 'index']);
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/games', [HomeController::class, 'games'])->name('games');
+Route::get('/history/{orderId}', [HomeController::class, 'history'])->name('history');
+Route::get('/payment/channels', [PaymentController::class, 'getPaymentChannels']);
+Route::post('/payment/create', [PaymentController::class, 'createTransaction']);
+Route::get('/gamestopup/{slug}', [TopupController::class, 'GamesTopup']);
+Route::get('/providertopup/{slug}/{category}', [TopupController::class, 'ProviderTopup']);
+
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
-    Route::get('/', [HomeController::class, 'index'])->name('home');
-    Route::get('/games', [HomeController::class, 'games'])->name('games');
-    Route::get('/history/{orderId}', [HomeController::class, 'history'])->name('history');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Payment Routes
-    Route::get('/payment/channels', [PaymentController::class, 'getPaymentChannels']);
-    Route::post('/payment/create', [PaymentController::class, 'createTransaction']);
-    Route::get('/gamestopup/{slug}', [TopupController::class, 'GamesTopup']);
-    Route::get('/providertopup/{slug}/{category}', [TopupController::class, 'ProviderTopup']);
     
     //ROUTE ADMIN
     Route::prefix('/admin')->group(function(){

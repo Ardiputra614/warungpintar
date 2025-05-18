@@ -14,7 +14,7 @@ const Navbar = ({ user }) => {
                                     href="/"
                                     className="text-white text-xl font-bold"
                                 >
-                                    PPOB App
+                                    Warung Pintar
                                 </Link>
                             </div>
                         </div>

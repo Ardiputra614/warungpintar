@@ -224,7 +224,7 @@ const ProviderTopup = ({ products, payment }) => {
                                         3. Pilih Metode Pembayaran
                                     </h2>
 
-                                    <div className="space-y-3">
+                                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-2 uppercase">
                                         {paymentMethods.map((method) => (
                                             <div
                                                 key={method.id}
@@ -238,42 +238,11 @@ const ProviderTopup = ({ products, payment }) => {
                                                     setPaymentMethod(method)
                                                 }
                                             >
-                                                <div className="bg-gray-100 p-2 rounded-md mr-4">
-                                                    <svg
-                                                        className="w-6 h-6 text-gray-700"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                    >
-                                                        {method.icon ===
-                                                            "credit-card" && (
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                                                            />
-                                                        )}
-                                                        {method.icon ===
-                                                            "qrcode" && (
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                                                            />
-                                                        )}
-                                                        {method.icon ===
-                                                            "university" && (
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
-                                                            />
-                                                        )}
-                                                    </svg>
+                                                <div className="bg-gray-100 p-2 rounded-md mr-4 w-12 h-12">
+                                                    <img
+                                                        src={`/storage/${method.logo}`}
+                                                        className="object-cover justify-items-center"
+                                                    />
                                                 </div>
                                                 <div className="flex-grow">
                                                     <div className="font-medium">
