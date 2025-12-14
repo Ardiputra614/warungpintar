@@ -3,16 +3,9 @@ import axios from "axios";
 import { Search } from "lucide-react";
 import { useState } from "react";
 
-export default function Pulsa({ provider }) {
+export default function Pulsa({ games }) {
     const [selectedProvider, setSelectedProvider] = useState(null);
 
-    const topupOptions = [
-        { amount: "100 Diamonds", price: 25000 },
-        { amount: "250 Diamonds", price: 50000 },
-        { amount: "500 Diamonds", price: 100000 },
-        { amount: "1000 Diamonds", price: 200000 },
-    ];
-    console.log(provider);
     return (
         <>
             {/* Game Search Section */}
@@ -21,7 +14,7 @@ export default function Pulsa({ provider }) {
             <div className="relative">
                 <input
                     type="text"
-                    placeholder="Cari provider favoritmu..."
+                    placeholder="Cari games favoritmu..."
                     className="w-full bg-white rounded-xl py-3 px-4 pl-12 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <Search
@@ -39,9 +32,10 @@ export default function Pulsa({ provider }) {
                     </h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {provider.map((p) => (
+                    {games.map((p) => (
                         <Link
-                            href={`/providertopup/${p.slug}/Pulsa`}
+                            // href={`/providertopup/${p.slug}/Pulsa`}
+                            href={`/${p.slug}`}
                             key={p.id}
                             className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                         >

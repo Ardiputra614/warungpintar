@@ -3,7 +3,7 @@ import axios from "axios";
 import { Search } from "lucide-react";
 import { useState } from "react";
 
-export default function Data({ provider }) {
+export default function Data({ games }) {
     const [selectedProvider, setSelectedProvider] = useState(null);
 
     return (
@@ -14,7 +14,7 @@ export default function Data({ provider }) {
             <div className="relative">
                 <input
                     type="text"
-                    placeholder="Cari provider favoritmu..."
+                    placeholder="Cari games favoritmu..."
                     className="w-full bg-white rounded-xl py-3 px-4 pl-12 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <Search
@@ -32,9 +32,9 @@ export default function Data({ provider }) {
                     </h2>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {provider.map((p) => (
+                    {games.map((p) => (
                         <Link
-                            href={`/providertopup/${p.slug}/Pulsa`}
+                            href={`/gamestopup/${p.slug}`}
                             key={p.id}
                             className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                         >

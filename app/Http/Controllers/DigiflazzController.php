@@ -14,58 +14,76 @@ use Illuminate\Support\Str;
 class DigiflazzController extends Controller
 {
     public function getProducts(Request $request)
-    {
-        $header = array(
-            'Content-Type' => 'application/json'
-        );
-        // API Digiflazz endpoint dan API key
-        $apiUrl = "https://api.digiflazz.com/v1/price-list";
-        $apiKey = env('DIGIFLAZZ_PROD_KEY'); // Ganti dengan API key yang valid
-        $username = env('DIGIFLAZZ_USERNAME');
+{
+    $header = ['Content-Type' => 'application/json'];
+    $apiUrl = "https://api.digiflazz.com/v1/price-list";
+    $apiKey = env('DIGIFLAZZ_PROD_KEY');
+    $username = env('DIGIFLAZZ_USERNAME');
 
-        // Melakukan request ke API Digiflazz menggunakan Laravel HTTP Client
-        // Data yang akan dikirim ke API Digiflazz
-        $data = [
-            'cmd' => 'prepaid',  // Misalnya cmd prepaid
-            'username' => $username,  // Ganti dengan username yang sesuai
-            'sign' => md5($username . $apiKey . "pricelist") // Ganti dengan sign yang sesuai
-        ];
-        // md5(username + apiKey + "pricelist")
+    $data = [
+        'cmd' => 'prepaid',
+        'username' => $username,
+        'sign' => md5($username . $apiKey . "pricelist")
+    ];
 
-        // Melakukan request POST ke API Digiflazz
-        $response = Http::withHeaders($header)->post($apiUrl, $data);
+    $response = Http::withHeaders($header)->post($apiUrl, $data);
+    
+    if ($response->successful()) {
+        $responseData = $response->json();
         
-        // Cek apakah permintaan berhasil
-        if ($response->successful()) {
-            
-    // Proses data dan simpan ke database
-    foreach ($response['data'] as $product) {
-        // Pastikan Anda menyesuaikan kolom-kolom dengan yang ada di tabel database
-        Produk::create([
-            "product_name" => $product['product_name'],
-            "slug" => Str::slug($product['brand']),
-            "category" => $product['category'],
-            "brand" => $product['brand'],
-            "type" => $product['type'],
-            "seller_name" => $product['seller_name'],
-            "selling_price" => $product['price'] + 1000,
-            "price" => $product['price'],
-            "buyer_sku_code" => $product['buyer_sku_code'],
-            "buyer_product_status" => $product['buyer_product_status'],
-            "seller_product_status" => $product['seller_product_status'],
-            "unlimited_stock" => $product['unlimited_stock'],
-            "stock" => $product['stock'],
-            "multi" => $product['multi'],
-            "start_cut_off" => $product['start_cut_off'],
-            "end_cut_off" => $product['end_cut_off'],
-            "desc" => $product['desc']
-        ]);       
-    }    
-            return response()->json($response->json());
-        } else {
-            return response()->json(['error' => 'Gagal mengambil data produk'], 500);
+        // VALIDASI PENTING: Pastikan data adalah array
+        if (!isset($responseData['data']) || !is_array($responseData['data'])) {
+            return response()->json([
+                'error' => 'Invalid API response structure',
+                'response' => $responseData
+            ], 500);
         }
+        
+        foreach ($responseData['data'] as $product) {
+    // Cuma 2 validasi penting
+    $buyerSkuCode = $product['buyer_sku_code'] ?? null;
+    $productName = $product['product_name'] ?? null;
+    
+    if (empty($buyerSkuCode) || empty($productName)) {
+        continue; // Skip kalau data penting kosong
     }
+    
+    // Generate slug dengan null safety
+    $slug = Str::slug(($product['brand'] ?? '') . ' ' . $productName);
+    
+    Produk::updateOrCreate(
+        ['buyer_sku_code' => $buyerSkuCode], // INI SUDAH BENAR
+        [
+            "product_name" => $productName,
+            "slug" => $slug ?: 'product-' . $buyerSkuCode,
+            "category" => $product['category'] ?? '',
+            "brand" => $product['brand'] ?? '',
+            "type" => $product['type'] ?? '',
+            "seller_name" => $product['seller_name'] ?? '',
+            "selling_price" => $product['price'] ?? 0,
+            "price" => $product['price'] ?? 0,
+            "buyer_product_status" => $product['buyer_product_status'] ?? '',
+            "seller_product_status" => $product['seller_product_status'] ?? '',
+            "unlimited_stock" => $product['unlimited_stock'] ?? false,
+            "stock" => $product['stock'] ?? 0,
+            "multi" => $product['multi'] ?? false,
+            "start_cut_off" => $product['start_cut_off'] ?? '',
+            "end_cut_off" => $product['end_cut_off'] ?? '',
+            "desc" => $product['desc'] ?? '',
+            "updated_at" => now(),
+        ]
+    );
+}
+        
+        return response()->json($responseData);
+    }
+    
+    return response()->json([
+        'error' => 'Gagal mengambil data produk',
+        'status' => $response->status(),
+        'body' => $response->body()
+    ], 500);
+}
 
 public function topup($orderId)
 {

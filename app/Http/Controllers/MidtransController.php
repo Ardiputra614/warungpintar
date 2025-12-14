@@ -16,15 +16,16 @@ class MidtransController extends Controller
 
         $paymentMethod = $request->input('paymentMethod'); // Atau ambil dari $request->input('payment_method');
         // $paymentMethod = 'qris'; // Atau ambil dari $request->input('payment_method');
-        $grossAmount = $request->input('selling_price');
+        $grossAmount = $request->input('selling_price') + $request->input('fee');
         $customerNo = $request->input('customer_no');
 
         $item_details = [
             ['id' => $request->input('id'), 'price' => $request->input('selling_price'), 'quantity' => 1, 'name' => $request->input('product_name')],
-            // ['id' => 'item2', 'selling_price' => 10000, 'quantity' => 1, 'name' => 'Biaya Admin']
+            ['id' => 'fee', 'price' => $request->input('fee'), 'quantity' => 1, 'name' => 'Biaya Admin']
         ];
 
-        $orderId = 'ORD' . time();
+        $orderId = 'ORD-' . now()->format('YmdHis') . '-' . rand(1000,9999);
+
 
         $transaction_data = [
             'transaction_details' => [
@@ -34,71 +35,93 @@ class MidtransController extends Controller
             'item_details' => $item_details
         ];
 
-        if ($paymentMethod === 'qris') {
-            $transaction_data['payment_type'] = 'qris';
-            $transaction_data['qris'] = ['acquirer' => 'gopay'];
-        } elseif ($paymentMethod === 'gopay') {
-            $transaction_data['payment_type'] = 'gopay';
-            $transaction_data['gopay'] = ['enable_callback' => true, 'callback_url' => 'https://7b2b-2400-9800-820-4ce1-fab3-12a2-2d7b-7e84.ngrok-free.app/api/midtrans/webhook'];
-        } elseif ($paymentMethod === 'shopeepay') {
-            $transaction_data['payment_type'] = 'shopeepay';
-            $transaction_data['shopeepay'] = ['callback_url' => 'https://7b2b-2400-9800-820-4ce1-fab3-12a2-2d7b-7e84.ngrok-free.app/api/midtrans/webhook'];
-        } elseif (in_array($paymentMethod, ['bca', 'bni', 'bri', 'permata'])) {
-            $transaction_data['payment_type'] = 'bank_transfer';
-            $transaction_data['bank_transfer'] = ['bank' => $paymentMethod];
-        } else {
-            return response()->json(['error' => 'Invalid payment method'], 400);
+        // / Tentukan payment_type dan detail spesifik
+    $paymentType = '';
+    $paymentMethodName = $paymentMethod;
+    
+    if ($paymentMethod === 'qris') {
+        $paymentType = 'qris';
+        $transaction_data['payment_type'] = 'qris';
+        $transaction_data['qris'] = ['acquirer' => 'gopay'];
+    } elseif ($paymentMethod === 'gopay') {
+        $paymentType = 'gopay';
+        $transaction_data['payment_type'] = 'gopay';
+        $transaction_data['gopay'] = ['enable_callback' => true, 'callback_url' => 'https://...'];
+    } elseif ($paymentMethod === 'shopeepay') {
+        $paymentType = 'shopeepay';
+        $transaction_data['payment_type'] = 'shopeepay';
+        $transaction_data['shopeepay'] = ['callback_url' => 'https://...'];
+    } elseif (in_array($paymentMethod, ['bca', 'bni', 'bri', 'permata', 'mandiri', 'cimb'])) {
+        $paymentType = 'bank_transfer';  // Ini yang disimpan di payment_type
+        $paymentMethodName = $paymentMethod; // 'bca', 'bni', dll
+        $transaction_data['payment_type'] = 'bank_transfer';
+        $transaction_data['bank_transfer'] = ['bank' => $paymentMethod];
+        
+        // Tambahkan VA number jika perlu (Midtrans akan generate)
+        if ($paymentMethod === 'bca') {
+            $transaction_data['bank_transfer']['va_number'] = ''; // Midtrans akan isi
+        } elseif (in_array($paymentMethod, ['bni', 'bri'])) {
+            $transaction_data['bank_transfer']['va_number'] = ''; // Midtrans akan isi
+        } elseif ($paymentMethod === 'permata') {
+            $transaction_data['bank_transfer']['permata'] = [
+                'recipient_name' => $request->input('customer_name', 'Customer')
+            ];
         }
+    } else {
+        return response()->json(['error' => 'Invalid payment method'], 400);
+    }
 
+    try {
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ])
+        ->withBasicAuth(config('midtrans.server_key'), '')
+        ->post('https://api.sandbox.midtrans.com/v2/charge', $transaction_data);
 
-        try {
-            $response = Http::withHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-            ])
-            ->withBasicAuth(config('midtrans.server_key'), '')
-            // ->post('https://api.midtrans.com/v2/charge', $transaction_data); //production
-            ->post('https://api.sandbox.midtrans.com/v2/charge', $transaction_data); //sandbox
+        if ($response->successful()) {
+            $responseData = $response->json();
+            $status = 'pending';
+            
+            $trans = Transaction::create([
+                'product_id' => $request->input('id'),
+                'product_name' => $request->input('product_name'),
+                'buyer_sku_code' => $request->input('buyer_sku_code'),
+                'customer_no' => $customerNo,
+                'order_id' => $orderId,
+                'gross_amount' => $grossAmount,
+                'transaction_id' => $responseData['transaction_id'] ?? null,
+                'payment_status' => $status,
+                'payment_type' => $paymentType,  // 'bank_transfer', 'qris', 'gopay', dll
+                'payment_method_name' => $paymentMethodName, // 'bca', 'bni', 'gopay', dll
+                'status_message' => $responseData['status_message'],
+                'wa_pembeli' => $request->input('wa_pembeli'),
+                'url' => $this->getPaymentUrlOrVa($responseData),
+                // Simpan VA number jika ada
+                'va_number' => $this->getPaymentUrlOrVa($responseData, $paymentMethod),
+                'bank' => $paymentMethodName, // Kolom tambahan untuk bank
+            ]);
 
-            if ($response->successful()) {
-                $responseData = $response->json();
-                $status = 'pending';
-                $trans = Transaction::create([
-                    'product_id' => $request->input('id'),
-                    'product_name' => $request->input('product_name'),
-                    'buyer_sku_code' => $request->input('buyer_sku_code'),
-                    // 'buyer_sku_code' => 'xld10', //percobaan dari digiflazz
-                    'customer_no' => $customerNo,
-                    'order_id' => $orderId,
-                    'gross_amount' => $grossAmount,
-                    'transaction_id' => $responseData['transaction_id'] ?? null,
-                    'payment_status' => $status,
-                    'payment_type' => $request->input('payment_type'),
-                    'status_message' => $responseData['status_message'],
-                    'payment_method_name' => $paymentMethod,
-                    'wa_pembeli' => $request->input('wa_pembeli'),
-                    'url' => $this->getPaymentUrlOrVa($responseData),
-                ]);
+            Cache::put('transkey_' . $orderId, $responseData, now()->addMinutes(15));
 
-                Cache::put('transkey_' . $orderId, $responseData, now()->addMinutes(15)); // simpan selama 15 menit
-
-                return response()->json([
-                    'message' => 'Payment created',
-                    'data' => $responseData,
-                    'transaksi' => $trans
-                ]);
-            } else {
-                return response()->json([
-                    'error' => 'Failed to create payment',
-                    'message' => $response->body()
-                ], $response->status());
-            }
-        } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Exception occurred',
-                'message' => $e->getMessage()
-            ], 500);
+                'message' => 'Payment created',
+                'data' => $responseData,
+                'transaksi' => $trans
+            ]);
+        } else {
+            return response()->json([
+                'error' => 'Failed to create payment',
+                'message' => $response->body()
+            ], $response->status());
         }
+    } catch (\Exception $e) {
+        Log::error('Error creating transaction: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Exception occurred',
+            'message' => $e->getMessage()
+        ], 500);
+    }
     }
 
     private function getPaymentUrlOrVa(array $responseData)

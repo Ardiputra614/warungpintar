@@ -51,3 +51,6 @@ Route::post('wa-send', [WaSendController::class, 'WaSend']);
 //route untuk ambil payment method on untuk react-native
 Route::get('payment-method', [PaymentMethodController::class, 'paymentmethodon']);
 
+
+Route::post('/inquiry-pln/{customer_no}', [TopupController::class, 'inquiryPln']);
+

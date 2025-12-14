@@ -4,245 +4,281 @@ import {
     Copy,
     Download,
     ArrowLeft,
-    Share2,
     Home,
     MessageCircle,
-    CircleMinusIcon,
-    CircleX,
+    Clock,
+    XCircle,
+    AlertCircle,
 } from "lucide-react";
 import AppLayout from "@/Layouts/AppLayout";
+import { Head, Link } from "@inertiajs/react";
+import axios from "axios";
 
-export default function History({ data }) {
+export default function History({ data, error, orderId }) {
     const [copied, setCopied] = useState(false);
-    console.log(data);
-    // Data transaksi contoh
-    const transaction = {
-        id: "TRX-12345678",
-        date: "02 April 2025 14:30 WIB",
-        product: "Telkomsel 10.000",
-        number: "081234567890",
-        amount: 11000,
-        paymentMethod: "QRIS",
-        status: "Berhasil",
+    const [status, setStatus] = useState(data?.transaction_status || "pending");
+    const [isChecking, setIsChecking] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(300);
+
+    /* =====================
+        FORMATTER
+    ====================== */
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? "0" : ""}${s}`;
     };
 
-    const handleCopyTransactionId = () => {
-        navigator.clipboard.writeText(
-            data.payment_type === "bank_transfer" &&
-                data.va_numbers[0].va_number
-        );
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    const formatRupiah = (amount) => {
-        return new Intl.NumberFormat("id-ID", {
+    const formatRupiah = (amount) =>
+        new Intl.NumberFormat("id-ID", {
             style: "currency",
             currency: "IDR",
             minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
+        }).format(amount || 0);
+
+    /* =====================
+        COUNTDOWN
+    ====================== */
+    useEffect(() => {
+        if (status !== "pending") return;
+
+        const timer = setInterval(() => {
+            setTimeLeft((t) => (t <= 1 ? 0 : t - 1));
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [status]);
+
+    /* =====================
+        POLLING STATUS (FIXED)
+    ====================== */
+    useEffect(() => {
+        if (!data?.order_id || status !== "pending") return;
+
+        const interval = setInterval(async () => {
+            try {
+                setIsChecking(true);
+                const res = await axios.get(`/api/transaction/status`, {
+                    params: { order_id: data.order_id },
+                });
+
+                if (res.data?.status && res.data.status !== status) {
+                    setStatus(res.data.status);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsChecking(false);
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [data?.order_id, status]);
+
+    /* =====================
+        COPY VA
+    ====================== */
+    const handleCopy = async (text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            alert("Browser tidak mendukung copy");
+        }
     };
 
-    const [status, setStatus] = useState("pending");
+    /* =====================
+        DOWNLOAD QRIS
+    ====================== */
+    const downloadQR = () => {
+        const link = document.createElement("a");
+        link.href = data.url;
+        link.download = `QRIS-${data.order_id}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            axios
-                .get(`/api/transaction/status`, {
-                    params: { order_id: data.order_id },
-                })
-                .then((res) => {
-                    setStatus(res.data.status);
-                    if (res.data.status !== "pending") {
-                        clearInterval(interval); // Stop polling if status is final
-                        axios.post("/api/topup").then((res) => {
-                            console.log(res);
-                            if (res.data.data.status === "Sukses") {
-                                window.location.href = "/";
-                                // localStorage.removeItem("transkey");
-                            }
-                        });
-                    }
-                })
-                .catch((err) => {
-                    console.error("Error checking status:", err);
-                });
-        }, 3000); // cek setiap 3 detik
+    /* =====================
+        STATUS CONFIG
+    ====================== */
+    const statusConfig = {
+        settlement: {
+            icon: CheckCircle,
+            color: "text-green-500",
+            label: "Berhasil",
+            message: "Pembayaran berhasil",
+        },
+        pending: {
+            icon: Clock,
+            color: "text-yellow-400",
+            label: "Menunggu Pembayaran",
+            message: "Segera selesaikan pembayaran",
+        },
+        cancel: {
+            icon: XCircle,
+            color: "text-red-500",
+            label: "Dibatalkan",
+            message: "Transaksi dibatalkan",
+        },
+    };
 
-        return () => clearInterval(interval); // bersihkan saat komponen unmount
-    }, [data.order_id]);
+    const CurrentIcon = statusConfig[status]?.icon || Clock;
 
+    /* =====================
+        ERROR PAGE
+    ====================== */
+    if (!data) {
+        return (
+            <AppLayout>
+                <Head title="Transaksi Tidak Ditemukan" />
+                <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
+                    {error || "Transaksi tidak ditemukan"}
+                </div>
+            </AppLayout>
+        );
+    }
+
+    /* =====================
+        MAIN PAGE
+    ====================== */
     return (
         <AppLayout>
-            {/* Main Content */}
-            <main className="container mx-auto px-4 py-6">
-                {/* Success Message */}
-                <div className="bg-white rounded-lg p-6 shadow-sm mb-6 text-center">
-                    <div className="flex justify-center mb-4">
-                        {status === "settlement" ? (
-                            <CheckCircle size={64} className="text-green-500" />
-                        ) : status === "pending" ? (
-                            <CircleMinusIcon
-                                size={64}
-                                className="text-yellow-500"
+            <Head title={`Transaksi ${data.order_id}`} />
+
+            <div className="min-h-screen  text-white py-8">
+                <div className="max-w-4xl mx-auto px-4">
+                    {/* HEADER */}
+                    <Link
+                        href="/"
+                        className="flex items-center text-gray-400 mb-4"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Kembali
+                    </Link>
+
+                    {/* STATUS */}
+                    <div className="bg-gray-800 rounded-xl p-6 mb-6">
+                        <div className="flex items-center gap-4">
+                            <CurrentIcon
+                                className={`w-10 h-10 ${statusConfig[status].color}`}
                             />
-                        ) : status === "cancel" ? (
-                            <CircleX size={64} className="text-red-500" />
-                        ) : null}
+                            <div>
+                                <h2 className="text-xl font-bold">
+                                    {statusConfig[status].label}
+                                </h2>
+                                <p className="text-gray-400">
+                                    {statusConfig[status].message}
+                                </p>
+                            </div>
+                        </div>
+
+                        {status === "pending" && (
+                            <div className="mt-4 text-yellow-400">
+                                Sisa waktu: {formatTime(timeLeft)}
+                            </div>
+                        )}
                     </div>
-                    <h2 className="text-xl font-bold mb-2">
-                        Pembayaran {status}
-                    </h2>
-                    <p className="text-gray-600 mb-4">
-                        Transaksi telah berhasil diproses pada{" "}
-                        {transaction.date}
-                    </p>
-                    {data.payment_type === "bank_transfer" && (
-                        <div className="flex items-center justify-center">
-                            <span className="text-gray-700 font-medium mr-2">
-                                {data.payment_type === "bank_transfer" &&
-                                    data.url}
-                            </span>
-                            <button
-                                className="p-1 text-blue-600 hover:text-blue-800"
-                                onClick={handleCopyTransactionId}
-                            >
-                                {copied ? (
-                                    <CheckCircle
-                                        size={16}
-                                        className="text-green-500"
+
+                    {/* BANK TRANSFER */}
+                    {data.payment_type === "bank_transfer" &&
+                        status === "pending" && (
+                            <div className="bg-gray-800 rounded-xl p-6 mb-6">
+                                <h3 className="font-semibold mb-4 flex items-center">
+                                    <AlertCircle className="w-5 h-5 mr-2" />
+                                    Virtual Account{" "}
+                                    {data.payment_method_name.toUpperCase()}
+                                </h3>
+
+                                <div className="flex justify-between items-center bg-gray-900 p-4 rounded-lg">
+                                    <span className="font-mono text-xl">
+                                        {data.url}
+                                    </span>
+                                    <button
+                                        onClick={() => handleCopy(data.url)}
+                                        className="text-blue-400 flex items-center"
+                                    >
+                                        <Copy className="w-4 h-4 mr-1" />
+                                        {copied ? "Tersalin" : "Salin"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                    {/* QRIS */}
+                    {data.payment_type === "qris" && status === "pending" && (
+                        <div className="bg-gray-800 rounded-xl p-6 mb-6">
+                            <h3 className="font-semibold mb-4">QRIS</h3>
+
+                            <div className="flex flex-col items-center gap-4">
+                                <a
+                                    href={data.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <img
+                                        src={data.url}
+                                        alt="QRIS"
+                                        className="w-48 h-48 bg-white p-2 rounded-lg cursor-pointer"
                                     />
-                                ) : (
-                                    <Copy size={16} />
-                                )}
-                            </button>
+                                </a>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={downloadQR}
+                                        className="bg-green-600 px-4 py-2 rounded-lg flex items-center"
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        Download QR
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleCopy(data.url)}
+                                        className="bg-gray-700 px-4 py-2 rounded-lg flex items-center"
+                                    >
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        Salin Link
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
-                </div>
-                {/* Transaction Details */}
-                <div className="bg-white rounded-lg shadow-sm mb-6">
-                    <div className="p-4 border-b border-gray-100">
-                        <h3 className="font-bold text-gray-800">
-                            Detail Produk
-                        </h3>
-                    </div>
 
-                    <div className="p-4">
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Produk</span>
-                                <span className="font-medium text-gray-800">
-                                    {data.product_name}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                    Nomor Tujuan
-                                </span>
-                                <span className="font-medium text-gray-800">
-                                    {data.customer_no}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Harga</span>
-                                <span className="font-medium text-gray-800">
-                                    {formatRupiah(data.gross_amount)}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                    Metode Pembayaran
-                                </span>
-                                <span className="font-medium text-gray-800 uppercase">
-                                    {data.payment_type === "bank_transfer"
-                                        ? data.payment_method_name
-                                        : data.payment_type}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Status</span>
-                                <span className="font-medium text-green-500 uppercase">
-                                    {status}
-                                </span>
-                            </div>
-                            <div>
-                                {data.payment_type !== "bank_transfer" && (
-                                    <img src={data.url} className="w-60" />
-                                )}
-                            </div>
+                    {/* DETAIL */}
+                    <div className="bg-gray-800 rounded-xl p-6">
+                        <div className="flex justify-between py-2">
+                            <span>Order ID</span>
+                            <span>{data.order_id}</span>
+                        </div>
+                        <div className="flex justify-between py-2">
+                            <span>Produk</span>
+                            <span>{data.product_name}</span>
+                        </div>
+                        <div className="flex justify-between py-2">
+                            <span>Nomor</span>
+                            <span>{data.customer_no}</span>
+                        </div>
+                        <div className="flex justify-between py-2">
+                            <span>Serial Number</span>
+                            <span>{data.serial_number}</span>
+                        </div>
+                        <div className="flex justify-between py-2">
+                            <span>Status Pembelian {data.product_name}</span>
+                            <span>{data.digiflazz_status}</span>
+                        </div>
+                        <div className="flex justify-between py-2 font-bold">
+                            <span>Total</span>
+                            <span>{formatRupiah(data.gross_amount)}</span>
                         </div>
                     </div>
-                </div>
-                {/* Customer Information */}
-                {/* <div className="bg-white rounded-lg shadow-sm mb-6">
-                    <div className="p-4 border-b border-gray-100">
-                        <h3 className="font-bold text-gray-800">
-                            Informasi Penerima
-                        </h3>
-                    </div>
 
-                    <div className="p-4">
-                        <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">
-                                    Nama Provider
-                                </span>
-                                <span className="font-medium text-gray-800">
-                                    Telkomsel
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-600">Nomor</span>
-                                <span className="font-medium text-gray-800">
-                                    {transaction.number}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div> */}
-                {/* Customer Service */}
-                <div className="bg-white rounded-lg shadow-sm mb-6">
-                    <div className="p-4 border-b border-gray-100">
-                        <h3 className="font-bold text-gray-800">
-                            Layanan Pelanggan
-                        </h3>
-                    </div>
-
-                    <div className="p-4">
-                        <p className="text-gray-600 text-sm mb-4">
-                            Jika ada pertanyaan atau kendala terkait transaksi
-                            ini, silakan hubungi Customer Service kami.
-                        </p>
-                        <button className="flex items-center justify-center w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg">
-                            <MessageCircle size={18} className="mr-2" />
-                            <span>Hubungi Customer Service</span>
-                        </button>
+                    {/* FOOTER */}
+                    <div className="text-center text-gray-500 text-sm mt-6">
+                        © {new Date().getFullYear()} ARFENAZ MVA
                     </div>
                 </div>
-                {/* Receipt Actions */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    {/* <button className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-sm hover:bg-gray-50">
-                        <Download size={24} className="text-blue-600 mb-2" />
-                        <span className="text-sm font-medium">Unduh Bukti</span>
-                    </button> */}
-                    {/* <button className="flex flex-col items-center justify-center bg-white p-4 rounded-lg shadow-sm hover:bg-gray-50">
-                        <Share2 size={24} className="text-blue-600 mb-2" />
-                        <span className="text-sm font-medium">Bagikan</span>
-                    </button> */}
-                </div>
-                {/* Fixed Bottom Buttons */}
-                {/* <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg flex space-x-4">
-                    <button className="flex-1 bg-white border border-blue-600 text-blue-600 py-3 rounded-lg font-bold flex items-center justify-center">
-                        <Home size={18} className="mr-2" />
-                        Kembali ke Beranda
-                    </button>
-                    <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold">
-                        Transaksi Baru
-                    </button>
-                </div>
-                <div className="h-20"></div> Spacer for fixed buttons */}
-            </main>
+            </div>
         </AppLayout>
     );
 }

@@ -65,11 +65,11 @@ class DatabaseSeeder extends Seeder
             'logo' => 'https://api.unsplash.com/photos?query=random'
         ]);
 
-        GamesCategory::create([
-            'name' => 'MOBILE LEGENDS',
-            'slug' => 'mobile-legends',
-            'logo' => 'https://api.unsplash.com/photos?query=random'
-        ]);
+        // GamesCategory::create([
+        //     'name' => 'MOBILE LEGENDS',
+        //     'slug' => 'mobile-legends',
+        //     'logo' => 'https://api.unsplash.com/photos?query=random'
+        // ]);
 
         Tagihan::create([
             'name' => 'PLN',

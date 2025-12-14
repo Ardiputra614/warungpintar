@@ -39,7 +39,7 @@ Route::get('/games', [HomeController::class, 'games'])->name('games');
 Route::get('/history/{orderId}', [HomeController::class, 'history'])->name('history');
 Route::get('/payment/channels', [PaymentController::class, 'getPaymentChannels']);
 Route::post('/payment/create', [PaymentController::class, 'createTransaction']);
-Route::get('/gamestopup/{slug}', [TopupController::class, 'GamesTopup']);
+Route::get('/{slug}', [TopupController::class, 'Topup']);
 Route::get('/providertopup/{slug}/{category}', [TopupController::class, 'ProviderTopup']);
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {

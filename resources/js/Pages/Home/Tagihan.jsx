@@ -5,7 +5,6 @@ import { useState } from "react";
 
 export default function Tagihan({ tagihan }) {
     const [selectedPln, setSelectedPln] = useState(null);
-    console.log(tagihan);
     return (
         <>
             {/* Game Search Section */}
@@ -34,7 +33,7 @@ export default function Tagihan({ tagihan }) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {tagihan.map((p) => (
                         <Link
-                            href={`/tagihan/${p.slug}`}
+                            href={`/${p.slug}`}
                             key={p.id}
                             className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                         >

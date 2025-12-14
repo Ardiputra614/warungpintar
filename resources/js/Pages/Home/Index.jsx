@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Gamepad2,
     Phone,
@@ -8,6 +8,22 @@ import {
     Shield,
     Clock,
     TrendingUp,
+    Search,
+    ArrowRight,
+    Sparkles,
+    Zap as Lightning,
+    BatteryCharging,
+    Globe,
+    CreditCard,
+    CheckCircle,
+    Star,
+    Gift,
+    Trophy,
+    Users,
+    Award,
+    ShoppingBag,
+    Moon,
+    Sun,
 } from "lucide-react";
 import { Link } from "@inertiajs/react";
 import AppLayout from "@/Layouts/AppLayout";
@@ -15,35 +31,41 @@ import Games from "./Games";
 import Pulsa from "./Pulsa";
 import Data from "./Data";
 import Tagihan from "./Tagihan";
-import Banner from "@/Components/Banner";
 
 const Index = ({ games, provider, tagihan }) => {
     const [orderId, setOrderId] = useState("");
+    const [kategori, setKategori] = useState("Games");
+
+    const gamesCategory = games.filter(
+        (g) => g.category.toLowerCase() === kategori.toLowerCase()
+    );
+
     const services = [
         {
-            icon: <Gamepad2 size={24} />,
-            name: "Games",
-            color: "bg-indigo-100 text-indigo-600",
+            icon: <Gamepad2 size={28} />,
+            name: "Top Up Game",
+            value: "Games",
         },
         {
-            icon: <Phone size={24} />,
-            name: "Pulsa",
-            color: "bg-red-100 text-red-600",
+            icon: <Phone size={28} />,
+            name: "Pulsa & Data",
+            value: "Provider",
         },
         {
-            icon: <Wifi size={24} />,
-            name: "Paket Data",
-            color: "bg-blue-100 text-blue-600",
+            icon: <Zap size={28} />,
+            name: "Token Listrik",
+            value: "Tagihan",
         },
         {
-            icon: <Zap size={24} />,
-            name: "Tagihan",
-            color: "bg-yellow-100 text-yellow-600",
+            icon: <CreditCard size={28} />,
+            name: "Lainnya",
+            value: "Lainnya",
         },
     ];
 
-    const [kategori, setKategori] = useState("Games");
     const [activePromo, setActivePromo] = useState(0);
+    const [searchQuery, setSearchQuery] = useState("");
+    const promoRef = useRef(null);
 
     const promos = [
         {
@@ -51,25 +73,50 @@ const Index = ({ games, provider, tagihan }) => {
             title: "DISKON SPESIAL 50% MOBILE LEGENDS!",
             description:
                 "Top up diamond Mobile Legends diskon hingga 50%. Periode promo terbatas!",
-            bgColor: "from-blue-600 to-indigo-700",
-            image: "/api/placeholder/400/200",
+            bgColor:
+                "bg-gradient-to-r from-purple-800 via-pink-800 to-rose-900",
+            badge: "HOT",
+            badgeColor: "bg-red-600",
+            icon: <Trophy className="text-yellow-400" size={32} />,
+            cta: "Claim Now",
+            accentColor: "#8B5CF6",
         },
         {
             id: 2,
             title: "PROMO PULSA! BONUS 10%",
             description:
                 "Dapatkan bonus 10% untuk semua pembelian pulsa. Syarat dan ketentuan berlaku.",
-            bgColor: "from-red-500 to-pink-600",
-            image: "/api/placeholder/400/200",
+            bgColor:
+                "bg-gradient-to-r from-teal-800 via-emerald-800 to-green-900",
+            badge: "NEW",
+            badgeColor: "bg-blue-600",
+            icon: <Gift className="text-teal-200" size={32} />,
+            cta: "Get Bonus",
+            accentColor: "#14B8A6",
         },
         {
             id: 3,
             title: "PAKET DATA LEBIH MURAH!",
             description:
                 "Hemat hingga 20% untuk pembelian paket data internet. Nikmati internet lebih cepat!",
-            bgColor: "from-green-500 to-teal-600",
-            image: "/api/placeholder/400/200",
+            bgColor: "bg-gradient-to-r from-blue-800 via-cyan-800 to-sky-900",
+            badge: "POPULAR",
+            badgeColor: "bg-amber-600",
+            icon: <TrendingUp className="text-blue-200" size={32} />,
+            cta: "Shop Now",
+            accentColor: "#0EA5E9",
         },
+    ];
+
+    const stats = [
+        { icon: <Users size={20} />, value: "10K+", label: "Pengguna Aktif" },
+        {
+            icon: <CheckCircle size={20} />,
+            value: "99.8%",
+            label: "Success Rate",
+        },
+        { icon: <Clock size={20} />, value: "< 1m", label: "Proses Cepat" },
+        { icon: <Award size={20} />, value: "4.9/5", label: "Rating" },
     ];
 
     useEffect(() => {
@@ -81,88 +128,292 @@ const Index = ({ games, provider, tagihan }) => {
 
     return (
         <AppLayout>
-            <Banner promos={promos} activePromo={activePromo} />
-            <div className="min-h-screen">
-                {/* Top Banner */}
-                <div className="container mx-auto px-4 py-6">
-                    {/* Service Tabs */}
-                    <div className="mb-8">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold text-gray-800">
-                                Layanan
-                            </h2>
-                            <Link
-                                href="#"
-                                className="text-amber-500 text-sm font-medium flex items-center"
-                            >
-                                Lihat Semua <ChevronRight size={16} />
-                            </Link>
-                        </div>
-                        <div className="bg-white p-4 rounded-xl shadow-sm">
-                            <div className="grid grid-cols-4 gap-4">
-                                {services.map((service, index) => (
+            {/* Modern Hero Section - Dark Theme */}
+            <div className="relative overflow-hidden bg-[#37353E]">
+                {/* Animated Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#37353E] via-[#44444E] to-[#715A5A] opacity-90"></div>
+                <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-r from-purple-900/20 to-pink-900/20 transform -skew-y-3"></div>
+
+                <div className="container mx-auto px-4 pt-8 pb-16 relative">
+                    {/* Promo Carousel */}
+                    <div ref={promoRef} className="mb-12">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-2xl font-bold text-[#D3DAD9] flex items-center gap-2">
+                                    <Sparkles
+                                        className="text-yellow-400"
+                                        size={24}
+                                    />
+                                    Promo Spesial Hari Ini
+                                </h2>
+                                <p className="text-gray-300">
+                                    Diskon eksklusif untuk Anda
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                {promos.map((_, idx) => (
                                     <button
-                                        key={index}
-                                        onClick={() =>
-                                            setKategori(service.name)
-                                        }
-                                        className={`p-3 rounded-xl transition-all hover:shadow-md flex flex-col items-center gap-2 ${
-                                            kategori === service.name
-                                                ? "bg-amber-50 border-2 border-amber-300"
-                                                : ""
+                                        key={idx}
+                                        onClick={() => setActivePromo(idx)}
+                                        className={`w-2 h-2 rounded-full transition-all ${
+                                            activePromo === idx
+                                                ? "bg-purple-500 w-6"
+                                                : "bg-gray-600"
                                         }`}
-                                    >
-                                        <div
-                                            className={`w-12 h-12 rounded-full ${service.color} flex items-center justify-center`}
-                                        >
-                                            {service.icon}
-                                        </div>
-                                        <span
-                                            className={`text-xs font-medium ${
-                                                kategori === service.name
-                                                    ? "text-amber-700"
-                                                    : "text-gray-700"
-                                            }`}
-                                        >
-                                            {service.name}
-                                        </span>
-                                    </button>
+                                    />
                                 ))}
                             </div>
                         </div>
+
+                        <div className="relative h-64 rounded-3xl overflow-hidden shadow-2xl border border-gray-700/50">
+                            {promos.map((promo, idx) => (
+                                <div
+                                    key={promo.id}
+                                    className={`absolute inset-0 transition-all duration-700 ease-in-out ${
+                                        promo.bgColor
+                                    } ${
+                                        idx === activePromo
+                                            ? "opacity-100 z-10"
+                                            : "opacity-0 z-0"
+                                    }`}
+                                >
+                                    <div className="absolute inset-0 bg-black/40"></div>
+                                    <div className="absolute top-6 left-8">
+                                        <span
+                                            className={`${promo.badgeColor} text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg`}
+                                        >
+                                            {promo.badge}
+                                        </span>
+                                    </div>
+                                    <div className="absolute top-6 right-8">
+                                        {promo.icon}
+                                    </div>
+                                    <div className="absolute bottom-8 left-8 right-8">
+                                        <h3 className="text-2xl font-bold text-white mb-2">
+                                            {promo.title}
+                                        </h3>
+                                        <p className="text-gray-200 mb-6">
+                                            {promo.description}
+                                        </p>
+                                        <button
+                                            className="bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center gap-2 border border-white/20 hover:border-white/30"
+                                            style={{
+                                                backgroundColor:
+                                                    promo.accentColor + "20",
+                                                borderColor:
+                                                    promo.accentColor + "40",
+                                            }}
+                                        >
+                                            {promo.cta}
+                                            <ArrowRight size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="container mx-auto px-4 pb-16 bg-[#37353E]">
+                {/* Services Section */}
+                <div className="mb-12">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 className="text-2xl font-bold text-[#D3DAD9]">
+                                Kategori Layanan
+                            </h2>
+                            <p className="text-gray-300">
+                                Pilih layanan yang Anda butuhkan
+                            </p>
+                        </div>
+                        <Link
+                            href="#"
+                            className="text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 transition-colors"
+                        >
+                            Lihat Semua <ChevronRight size={18} />
+                        </Link>
                     </div>
 
-                    {/* Content */}
-                    {kategori === "Games" && <Games games={games} />}
-                    {kategori === "Pulsa" && <Pulsa provider={provider} />}
-                    {kategori === "Tagihan" && <Tagihan tagihan={tagihan} />}
-                    {kategori === "Paket Data" && <Data provider={provider} />}
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {services.map((service, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setKategori(service.value)}
+                                className={`px-3 py-3 rounded-2xl transition-all duration-300 hover:scale-[1.02] border-2 flex flex-col items-center text-center group backdrop-blur-sm`}
+                            >
+                                <h3
+                                    className={`font-bold text-lg mb-2 text-white`}
+                                >
+                                    {service.name}
+                                </h3>
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                    {/* Submenu: Cek Transaksi dan Kalkulator */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
-                        <div className="bg-white p-6 rounded-xl shadow-md">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                                Cek Transaksi
+                {/* Dynamic Content */}
+                <div className="mb-12">
+                    {kategori && (
+                        <Games
+                            games={gamesCategory}
+                            title="Top Up Game Populer"
+                            layout="grid"
+                            columns={4}
+                            className="dark-mode"
+                        />
+                    )}
+                    {/* {kategori === "Pulsa" && (
+                        <Pulsa
+                            games={providerCategory}
+                            title="Pulsa & Paket Data"
+                            layout="card"
+                            className="dark-mode"
+                        />
+                    )}
+                    {kategori === "PLN" && (
+                        <Tagihan
+                            tagihan={tagihanCategory}
+                            title="Token Listrik & Tagihan"
+                            className="dark-mode"
+                        />
+                    )}
+                    {kategori === "Lainnya" && (
+                        <div className="text-center py-12 bg-[#44444E] rounded-3xl border border-gray-700/50">
+                            <ShoppingBag className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-[#D3DAD9] mb-2">
+                                Layanan Lainnya Segera Hadir
                             </h3>
-                            <form>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Masukkan ID Transaksi:
+                            <p className="text-gray-400">
+                                Kami sedang menyiapkan layanan terbaik untuk
+                                Anda
+                            </p>
+                        </div>
+                    )} */}
+                </div>
+
+                {/* Transaction Check & Calculator */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="bg-gradient-to-br from-[#44444E] to-[#37353E] rounded-3xl p-8 shadow-xl border border-gray-700/50">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
+                                <Search className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-[#D3DAD9]">
+                                    Cek Status Transaksi
+                                </h3>
+                                <p className="text-gray-300">
+                                    Lacak pesanan Anda dengan mudah
+                                </p>
+                            </div>
+                        </div>
+
+                        <form className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Masukkan ID Transaksi
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Contoh: TRX-123456789"
+                                        value={orderId}
+                                        onChange={(e) =>
+                                            setOrderId(e.target.value)
+                                        }
+                                        className="w-full px-4 py-4 pl-12 bg-[#44444E] rounded-xl border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
+                                    />
+                                    <CreditCard
+                                        className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+                                        size={20}
+                                    />
+                                </div>
+                            </div>
+                            <Link
+                                href={`/history/${orderId}`}
+                                className={`w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all shadow-lg ${
+                                    !orderId
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                }`}
+                            >
+                                Cek Status Transaksi
+                                <ArrowRight size={18} />
+                            </Link>
+                        </form>
+
+                        <div className="mt-6 pt-6 border-t border-gray-700">
+                            <p className="text-sm text-gray-400 flex items-center gap-2">
+                                <Clock size={16} className="text-gray-400" />
+                                Status update real-time setiap 5 menit
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-[#44444E] to-[#37353E] rounded-3xl p-8 shadow-xl border border-gray-700/50">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
+                                <TrendingUp className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-[#D3DAD9]">
+                                    Kalkulator Pulsa
+                                </h3>
+                                <p className="text-gray-300">
+                                    Hitung kebutuhan pulsa & data Anda
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Pilih Provider
+                                </label>
+                                <select className="w-full px-4 py-4 bg-[#44444E] rounded-xl border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white">
+                                    <option className="bg-[#44444E]">
+                                        Telkomsel
+                                    </option>
+                                    <option className="bg-[#44444E]">XL</option>
+                                    <option className="bg-[#44444E]">
+                                        Indosat
+                                    </option>
+                                    <option className="bg-[#44444E]">
+                                        Tri
+                                    </option>
+                                    <option className="bg-[#44444E]">
+                                        Smartfren
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Nominal (Rp)
                                 </label>
                                 <input
-                                    type="text"
-                                    placeholder="contoh: TRX123456"
-                                    value={orderId}
-                                    onChange={(e) => setOrderId(e.target.value)}
-                                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                    type="number"
+                                    placeholder="10000"
+                                    className="w-full px-4 py-4 bg-[#44444E] rounded-xl border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
                                 />
-                                <Link
-                                    href={`/history/${orderId}`}
-                                    type="button"
-                                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-                                >
-                                    Cek Status
-                                </Link>
-                            </form>
+                            </div>
+
+                            <button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all shadow-lg">
+                                Hitung Masa Aktif
+                            </button>
+                        </div>
+
+                        <div className="mt-6 pt-6 border-t border-gray-700">
+                            <div className="text-center">
+                                <p className="text-sm text-gray-400">
+                                    Estimasi Masa Aktif
+                                </p>
+                                <p className="text-2xl font-bold text-cyan-400">
+                                    30 Hari
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -5,7 +5,7 @@ const Navbar = ({ user }) => {
     return (
         <>
             {/* Top Navigation */}
-            <nav className="bg-gradient-to-r from-amber-700 to-amber-900 border-b border-amber-900">
+            <nav className="bg-[#1a191d] border-b border-amber-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex">

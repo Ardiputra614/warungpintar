@@ -14,9 +14,9 @@ import { useState } from "react";
 
 export default function AppLayout({ user, header, aplikasi, children }) {
     const [balance, setBalance] = useState(1500000);
-    console.log(children);
+    // console.log(children);
     return (
-        <div className="min-h-screen bg-amber-50">
+        <div className="min-h-screen bg-[#37353E] text-white">
             <Navbar />
 
             {/* <header className="bg-brown-600 bg-gradient-to-r from-amber-700 to-amber-900 p-4 sticky top-0 z-50">
