@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('profil_aplikasis', function (Blueprint $table) {
             $table->id();
             $table->string('application_name');
-            $table->string('application_fee');
-            $table->string('logo');            
+            $table->string('application_fee'); //nominal
+            $table->string('saldo');
+            $table->string('logo');
             $table->timestamps();
         });
     }

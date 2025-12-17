@@ -42,14 +42,26 @@ class DigiflazzTopup implements ShouldQueue
         ]);
 
         $responseData = json_decode($response, true);
+        
+         Log::info('DigiFlazz Request:', [
+            'ref_id' => $refId,
+            'sku' => $this->order->buyer_sku_code,
+            'customer_no' => $this->order->customer_no,
+            'signature' => $signature
+        ]);
 
         if (($responseData['data']['rc'] ?? null) == '00') {
             Cache::forget('transkey_' . $refId);
-            Log::info("✅ Topup success for order {$refId}.");
-
+            Log::info("✅ Topup success for order {$refId}.", $responseData['data']);
+            
+            // Update order dengan data lengkap
             $this->order->update([
-                'status' => 'success',
-                'message' => $responseData['data']['message'] ?? 'Topup berhasil'
+                'digiflazz_status' => $data['status'] ?? 'Sukses',
+                'status_message' => $data['message'] ?? 'Topup berhasil',
+                'serial_number' => $data['sn'] ?? null,
+                'ref_id' => $data['ref_id'] ?? $refId,
+                'digiflazz_response' => $responseData['data'],
+                'updated_at' => now()
             ]);
 
             // Kirim notifikasi via Fonnte

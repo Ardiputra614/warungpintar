@@ -2,6 +2,7 @@ import FormatRupiah from "@/Components/FormatRupiah";
 import AppLayout from "@/Layouts/AppLayout";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { createInertiaApp } from "@inertiajs/react";
 
 const GamesTopup = ({
     products,
@@ -849,7 +850,7 @@ const GamesTopup = ({
                 console.log(res);
                 if (res.data.data?.transaction_status === "pending") {
                     const orderId = res.data.data.order_id;
-                    route.visit(`/history/${orderId}`);
+                    window.location.href = `/history/${orderId}`;
                 } else {
                     console.log("Payment created successfully:", res.data);
                 }

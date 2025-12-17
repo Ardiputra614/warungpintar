@@ -100,6 +100,7 @@ class MidtransController extends Controller
                 // Simpan VA number jika ada
                 'va_number' => $this->getPaymentUrlOrVa($responseData, $paymentMethod),
                 'bank' => $paymentMethodName, // Kolom tambahan untuk bank
+                'digiflazz_data' => null,
             ]);
 
             Cache::put('transkey_' . $orderId, $responseData, now()->addMinutes(15));

@@ -10,6 +10,9 @@ class Transaction extends Model
     use HasFactory;
 
     protected $guarded = ['id'];
+    protected $casts = [
+        'digiflazz_data' => 'array'
+    ];
 
     public function user()
     {

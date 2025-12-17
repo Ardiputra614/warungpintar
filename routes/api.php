@@ -44,6 +44,7 @@ Route::post('/webhookdigiflazz', [DigiflazzController::class, 'handleDigiflazz']
 
 //route untuk ngambil produk dari digiflazz insert ke database
 Route::post('/dataproduk', [DigiflazzController::class, 'getProducts']);
+Route::post('/dataproduk-pasca', [DigiflazzController::class, 'getProductsPasca']);
 
 //ROute untuk kirim pesan wa after transaksi
 Route::post('wa-send', [WaSendController::class, 'WaSend']);

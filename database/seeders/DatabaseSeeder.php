@@ -7,11 +7,13 @@ namespace Database\Seeders;
 use App\Models\GamesCategory;
 use App\Models\PaymentMethod;
 use App\Models\PlnCategory;
+use App\Models\ProfilAplikasi;
 use App\Models\Provider;
 use App\Models\Tagihan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpKernel\Profiler\Profile;
 
 class DatabaseSeeder extends Seeder
 {
@@ -31,6 +33,13 @@ class DatabaseSeeder extends Seeder
             'name' => 'Arfenaz',
             'email' => 'admin@gmail.com',
             'password' => Hash::make('12345'),
+        ]);
+
+        ProfilAplikasi::create([
+            'application_name' => 'Warung Pintar',
+            'application_fee' => '0',
+            'logo' => '#',
+            'saldo' => 0,
         ]);
 
         Provider::create([

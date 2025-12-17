@@ -30,6 +30,10 @@ class ProfilAplikasiResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->numeric(),
+                Forms\Components\TextInput::make('saldo')
+                    ->required()
+                    ->maxLength(255)
+                    ->numeric(),
                 Forms\Components\FileUpload::make('logo')
                     ->required()
                     ->image()
@@ -47,6 +51,8 @@ class ProfilAplikasiResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('application_fee')
                     ->searchable()
+                    ->money('IDR'),
+                Tables\Columns\TextColumn::make('saldo')
                     ->money('IDR'),
                 Tables\Columns\ImageColumn::make('logo')
                 ->disk('public')
