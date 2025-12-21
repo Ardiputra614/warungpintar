@@ -18,7 +18,7 @@ const Navbar = ({ user }) => {
                                 </Link>
                             </div>
                         </div>
-                        {/* <div className="flex items-center">
+                        <div className="flex items-center">
                             <div className="ml-3 relative">
                                 <Link
                                     href={route("profile.edit")}
@@ -39,7 +39,7 @@ const Navbar = ({ user }) => {
                                     </div>
                                 </Link>
                             </div>
-                        </div> */}
+                        </div>
                     </div>
                 </div>
             </nav>
