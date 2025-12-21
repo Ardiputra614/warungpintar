@@ -18,7 +18,7 @@ const Navbar = ({ user }) => {
                                 </Link>
                             </div>
                         </div>
-                        {/* <div className="flex items-center">
+                        <div className="flex items-center">
                             <div className="ml-3 relative">
                                 <Link
                                     href={route("profile.edit")}
@@ -26,10 +26,10 @@ const Navbar = ({ user }) => {
                                 >
                                     {user?.name}
                                     <div className="flex items-center gap-4">
-                                        <Bell
+                                        {/* <Bell
                                             className="text-white"
                                             size={20}
-                                        />
+                                        /> */}
                                         <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center">
                                             <User
                                                 className="text-amber-800"
@@ -39,7 +39,7 @@ const Navbar = ({ user }) => {
                                     </div>
                                 </Link>
                             </div>
-                        </div> */}
+                        </div>
                     </div>
                 </div>
             </nav>
