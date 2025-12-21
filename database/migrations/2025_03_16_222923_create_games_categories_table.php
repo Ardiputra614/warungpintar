@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('logo')->nullable();
             $table->string('icon')->nullable();
             $table->string('color')->default('#3B82F6');
-            $table->enum("category", ["tagihan", 'provider', 'games']);
+            $table->string("category");
             
             // Description
             $table->text('description')->nullable();
@@ -129,7 +129,7 @@ return new class extends Migration
             [
                 'name' => 'PLN',
                 'slug' => 'pln',
-                'category' => 'tagihan',
+                'category' => 'pln',
                 'customer_no_format' => 'satu_input',
                 'field1_label' => 'Nomor Meter',
                 'field1_placeholder' => 'Masukkan Nomor meter',

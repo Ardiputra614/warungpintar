@@ -53,5 +53,5 @@ Route::post('wa-send', [WaSendController::class, 'WaSend']);
 Route::get('payment-method', [PaymentMethodController::class, 'paymentmethodon']);
 
 
-Route::post('/inquiry-pln/{customer_no}', [TopupController::class, 'inquiryPln']);
+Route::post('/inquiry-pln', [TopupController::class, 'inquiryPln']);
 

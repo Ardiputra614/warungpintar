@@ -70,7 +70,7 @@ class GamesCategoryResource extends Resource
                                                     ->helperText('Ukuran direkomendasikan: 64x64 px'),
                                                 Forms\Components\Select::make('category')
                                                     ->options([
-                                                        'Provider' => 'Provider', 'Tagihan' => 'Tagihan', 'Games' => 'Games',
+                                                        'provider' => 'Provider', 'pln' => 'PLN', 'games' => 'Games', 'prabayar' => 'Prabayar'
                                                     ])                                            
                                                     ->required()
                                                     ->label('Kategory'),

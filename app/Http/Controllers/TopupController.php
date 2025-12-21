@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\GamesCategory;
 use App\Models\PaymentMethod;
 use App\Models\Produk;
+use App\Models\ProdukPasca;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class TopupController extends Controller
@@ -17,9 +20,16 @@ class TopupController extends Controller
         $game = GamesCategory::where('slug', $slug)->first();
         
         // Ambil semua produk dengan slug yang cocok
-        $products = Produk::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
-        ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
-        ->get();        
+        if ($game->category !== 'prabayar') {
+            $products = Produk::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+            ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
+            ->get();                    
+        } else {
+            $products = ProdukPasca::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+            ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
+            ->get();                    
+        }
+        
         
         $paymentMethods = PaymentMethod::where('status', true)->get();
         
@@ -28,6 +38,38 @@ class TopupController extends Controller
         
         
         return Inertia::render('Topup/GamesTopup', [
+            'game' => $game,
+            'products' => $products, // Semua produk (untuk kompatibilitas)            
+            'payment' => $paymentMethods,
+            'appUrl' => config('app.url'),
+            'formatConfig' => $formatConfig,            
+            'exampleFormat' => $game->example_format ?? $this->getDefaultExample($game->customer_no_format)
+        ]);
+    }
+
+    public function PascaBayar($slug)
+    {
+        $game = GamesCategory::where('slug', $slug)->first();
+        
+        // Ambil semua produk dengan slug yang cocok
+        if ($game->category !== 'prabayar') {
+            $products = Produk::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+            ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
+            ->get();                    
+        } else {
+            $products = ProdukPasca::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+            ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
+            ->get();                    
+        }
+        
+        
+        $paymentMethods = PaymentMethod::where('status', true)->get();
+        
+        // Get format configuration based on game's customer_no_format
+        $formatConfig = $this->getFormatConfig($game->customer_no_format);
+        
+        
+        return Inertia::render('Topup/PascaBayar', [
             'game' => $game,
             'products' => $products, // Semua produk (untuk kompatibilitas)            
             'payment' => $paymentMethods,
@@ -66,7 +108,7 @@ private function getDefaultExample($format)
 {
     $examples = [
         'satu_input' => '123456789',
-        'dua_input' => '123456789+1234',        
+        'dua_input' => '123456',        
     ];
     
     return $examples[$format] ?? '123456789';
@@ -87,13 +129,15 @@ private function getDefaultExample($format)
         return response()->json($data);
     }
         
-    public function inquiryPln($customer_no)
+    public function inquiryPln(Request $request)
 {
     $username = env('DIGIFLAZZ_USERNAME');
     $prodKey = env('DIGIFLAZZ_PROD_KEY');
+    // Log::info($request->all());
+    $customer_no = $request->customer_no;
     
     // Validasi sederhana
-    if (empty($customer_no) || !is_numeric($customer_no)) {
+    if (empty($customer_no)) {
         return [
             'success' => false,
             'message' => 'Nomor pelanggan tidak valid',
@@ -102,49 +146,99 @@ private function getDefaultExample($format)
     }
     
     $signature = md5($username . $prodKey . $customer_no);
-    
-    try {
-        $response = Http::post('https://api.digiflazz.com/v1/inquiry-pln', [
-            "username" => $username,
-            "customer_no" => $customer_no,
-            "sign" => $signature,
-        ]);
-        
-        $responseData = $response->json();
-        
-        // Cek response code
-        $rc = $responseData['data']['rc'] ?? null;
-        
-        if ($rc == '00') {
-            Log::info("✅ Inquiry PLN berhasil: {$customer_no}");
+
+    if ($request->input('category') === 'prabayar') {
+        try {
+            $signPrabayar = md5($username . $prodKey . "some1d");
+            $response = Http::post('https://api.digiflazz.com/v1/transaction', [
+                // "commands" => "inq-pasca",
+                // "username" => $username, // Variabel yang sudah didefinisikan
+                // "buyer_sku_code" => "pln",
+                // "customer_no" => $customer_no, // Pakai dari input
+                // "ref_id" => 'test1', // PASTIKAN SAMA DENGAN YANG DIHITUNG DI SIGNATURE
+                // "testing" => true,
+                // "sign" => $signPrabayar // Signature yang sudah dihitung dengan benar
+                "commands" => "inq-pasca",
+                "username" => $username,
+                "buyer_sku_code" => "pdam",
+                "customer_no" => "2013230",
+                "ref_id" => "some1d",
+                "sign" => $signPrabayar
+            ]);
             
+            $responseData = $response->json();
+            Log::info('Response Digiflazz Inquiry:', $responseData);
+
+            $rc = $responseData['data']['rc'] ?? null;
+            
+            if ($rc == '00') {
+                Log::info("✅ Inquiry Berhasil");                
+                return [
+                    'success' => true,
+                    'message' => 'Inquiry berhasil',
+                    'data' => $responseData['data'],                    
+                ];
+            } else {
+                $message = $responseData['data']['message'] ?? 'Inquiry gagal';
+                Log::warning("❌ Inquiry gagal: {$message}");
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'data' => $responseData['data'] ?? null
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Error inquiry: ' . $e->getMessage());
             return [
-                'success' => true,
-                'message' => 'Inquiry berhasil',
-                'data' => $responseData['data']
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem',
+                'data' => null
             ];
-        } else {
-            $message = $responseData['data']['message'] ?? 'Inquiry gagal';
-            Log::warning("❌ Inquiry PLN gagal: {$customer_no} - {$message}");
+        }    
+    } else {
+        try {
+            $response = Http::post('https://api.digiflazz.com/v1/inquiry-pln', [
+                "username" => $username,
+                "customer_no" => $customer_no,
+                "sign" => $signature,
+            ]);
+            
+            $responseData = $response->json();
+            
+            // Cek response code
+            $rc = $responseData['data']['rc'] ?? null;
+            
+            if ($rc == '00') {
+                Log::info("✅ Inquiry PLN berhasil: {$customer_no}");
+                
+                return [
+                    'success' => true,
+                    'message' => 'Inquiry berhasil',
+                    'data' => $responseData['data']
+                ];
+            } else {
+                $message = $responseData['data']['message'] ?? 'Inquiry gagal';
+                Log::warning("❌ Inquiry PLN gagal: {$customer_no} - {$message}");
+                
+                return [
+                    'success' => false,
+                    'message' => $message,
+                    'data' => $responseData['data'] ?? null
+                ];
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error PLN inquiry: ' . $e->getMessage());
             
             return [
                 'success' => false,
-                'message' => $message,
-                'data' => $responseData['data'] ?? null
+                'message' => 'Terjadi kesalahan sistem',
+                'data' => null
             ];
         }
-        
-    } catch (\Exception $e) {
-        Log::error('Error PLN inquiry: ' . $e->getMessage());
-        
-        return [
-            'success' => false,
-            'message' => 'Terjadi kesalahan sistem',
-            'data' => null
-        ];
     }
-}
     
+}    
     
 
 }

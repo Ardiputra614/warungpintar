@@ -30,9 +30,9 @@ import AppLayout from "@/Layouts/AppLayout";
 import Games from "./Games";
 import Pulsa from "./Pulsa";
 import Data from "./Data";
-import Tagihan from "./Tagihan";
+import PLN from "./Tagihan";
 
-const Index = ({ games, provider, tagihan }) => {
+const Index = ({ games }) => {
     const [orderId, setOrderId] = useState("");
     const [kategori, setKategori] = useState("Games");
 
@@ -42,24 +42,20 @@ const Index = ({ games, provider, tagihan }) => {
 
     const services = [
         {
-            icon: <Gamepad2 size={28} />,
             name: "Top Up Game",
             value: "Games",
         },
         {
-            icon: <Phone size={28} />,
             name: "Pulsa & Data",
             value: "Provider",
         },
         {
-            icon: <Zap size={28} />,
             name: "Token Listrik",
-            value: "Tagihan",
+            value: "PLN",
         },
         {
-            icon: <CreditCard size={28} />,
-            name: "Lainnya",
-            value: "Lainnya",
+            name: "Prabayar",
+            value: "Prabayar",
         },
     ];
 
@@ -273,9 +269,9 @@ const Index = ({ games, provider, tagihan }) => {
                         />
                     )}
                     {kategori === "PLN" && (
-                        <Tagihan
-                            tagihan={tagihanCategory}
-                            title="Token Listrik & Tagihan"
+                        <PLN
+                            PLN={PLNCategory}
+                            title="Token Listrik & PLN"
                             className="dark-mode"
                         />
                     )}
@@ -349,71 +345,6 @@ const Index = ({ games, provider, tagihan }) => {
                                 <Clock size={16} className="text-gray-400" />
                                 Status update real-time setiap 5 menit
                             </p>
-                        </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-[#44444E] to-[#37353E] rounded-3xl p-8 shadow-xl border border-gray-700/50">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg">
-                                <TrendingUp className="text-white" size={24} />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-[#D3DAD9]">
-                                    Kalkulator Pulsa
-                                </h3>
-                                <p className="text-gray-300">
-                                    Hitung kebutuhan pulsa & data Anda
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Pilih Provider
-                                </label>
-                                <select className="w-full px-4 py-4 bg-[#44444E] rounded-xl border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white">
-                                    <option className="bg-[#44444E]">
-                                        Telkomsel
-                                    </option>
-                                    <option className="bg-[#44444E]">XL</option>
-                                    <option className="bg-[#44444E]">
-                                        Indosat
-                                    </option>
-                                    <option className="bg-[#44444E]">
-                                        Tri
-                                    </option>
-                                    <option className="bg-[#44444E]">
-                                        Smartfren
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Nominal (Rp)
-                                </label>
-                                <input
-                                    type="number"
-                                    placeholder="10000"
-                                    className="w-full px-4 py-4 bg-[#44444E] rounded-xl border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
-                                />
-                            </div>
-
-                            <button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-[1.02] transition-all shadow-lg">
-                                Hitung Masa Aktif
-                            </button>
-                        </div>
-
-                        <div className="mt-6 pt-6 border-t border-gray-700">
-                            <div className="text-center">
-                                <p className="text-sm text-gray-400">
-                                    Estimasi Masa Aktif
-                                </p>
-                                <p className="text-2xl font-bold text-cyan-400">
-                                    30 Hari
-                                </p>
-                            </div>
                         </div>
                     </div>
                 </div>

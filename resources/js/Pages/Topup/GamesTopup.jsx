@@ -39,9 +39,8 @@ const GamesTopup = ({
     const [plnData, setPlnData] = useState(null);
     const [plnError, setPlnError] = useState(null);
 
-    console.log(products);
     // Cek apakah ini produk PLN
-    const isPlnProduct = game.name === "PLN";
+    const isPlnProduct = game.category === "pln";
 
     // Fungsi untuk mendapatkan semua kategori yang tersedia
     const getAvailableCategories = () => {
@@ -464,12 +463,10 @@ const GamesTopup = ({
         setPlnData(null);
 
         try {
-            const response = await axios.post(
-                `/api/inquiry-pln/${customerNo}`,
-                {
-                    customer_no: customerNo,
-                }
-            );
+            const response = await axios.post(`/api/inquiry-pln`, {
+                customer_no: customerNo,
+                category: game.category,
+            });
 
             if (response.data.success) {
                 setPlnData(response.data.data);

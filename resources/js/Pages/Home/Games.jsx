@@ -19,7 +19,6 @@ const Game = ({ games }) => {
     const [sortBy, setSortBy] = useState("popular");
     const [activeCategory, setActiveCategory] = useState("all");
     const [showFilters, setShowFilters] = useState(false);
-
     // Get unique categories
     const categories = [
         "all",
@@ -138,7 +137,11 @@ const Game = ({ games }) => {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
                     {sortedGames.map((game) => (
                         <Link
-                            href={`/${game.slug}`}
+                            href={
+                                game.category === "pascabayar"
+                                    ? `/pascabayar/${game.slug}`
+                                    : `/${game.slug}`
+                            }
                             key={game.id}
                             className="block group"
                         >

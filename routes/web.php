@@ -40,6 +40,7 @@ Route::get('/history/{orderId}', [HomeController::class, 'history'])->name('hist
 Route::get('/payment/channels', [PaymentController::class, 'getPaymentChannels']);
 Route::post('/payment/create', [PaymentController::class, 'createTransaction']);
 Route::get('/{slug}', [TopupController::class, 'Topup']);
+Route::get('/pascabayar/{slug}', [TopupController::class, 'PascaBayar']);
 Route::get('/providertopup/{slug}/{category}', [TopupController::class, 'ProviderTopup']);
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
