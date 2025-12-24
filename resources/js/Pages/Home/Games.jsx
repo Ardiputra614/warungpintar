@@ -56,6 +56,7 @@ const Game = ({ games }) => {
                 return (b.popularity || 0) - (a.popularity || 0);
         }
     });
+    // console.log("kategori", games);
 
     return (
         <div className="space-y-6">

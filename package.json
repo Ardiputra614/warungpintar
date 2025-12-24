@@ -21,6 +21,7 @@
     },
     "dependencies": {
         "@grapesjs/studio-sdk": "^1.0.32",
+        "@heroicons/react": "^2.2.0",
         "git": "^0.1.5",
         "laravel-echo": "^1.19.0",
         "lucide-react": "^0.475.0",

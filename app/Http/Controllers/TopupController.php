@@ -52,15 +52,19 @@ class TopupController extends Controller
         $game = GamesCategory::where('slug', $slug)->first();
         
         // Ambil semua produk dengan slug yang cocok
-        if ($game->category !== 'prabayar') {
-            $products = Produk::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+        // if ($game->category !== 'prabayar') {
+        //     $products = Produk::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+        //     ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
+        //     ->get();                    
+        // } else {
+        //     $products = ProdukPasca::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+        //     ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
+        //     ->get();                    
+        // }
+
+        $products = ProdukPasca::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
             ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
-            ->get();                    
-        } else {
-            $products = ProdukPasca::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
-            ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
-            ->get();                    
-        }
+            ->get();
         
         
         $paymentMethods = PaymentMethod::where('status', true)->get();
@@ -161,7 +165,7 @@ private function getDefaultExample($format)
                 "commands" => "inq-pasca",
                 "username" => $username,
                 "buyer_sku_code" => "pdam",
-                "customer_no" => "2013230",
+                "customer_no" => $request->input('customer_no'),
                 "ref_id" => "some1d",
                 "sign" => $signPrabayar
             ]);

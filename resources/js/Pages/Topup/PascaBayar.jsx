@@ -1,7 +1,21 @@
 import FormatRupiah from "@/Components/FormatRupiah";
 import AppLayout from "@/Layouts/AppLayout";
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import axios from "axios";
+// import {
+//     Combobox,
+//     ComboboxInput,
+//     ComboboxOptions,
+//     ComboboxOption,
+//     ComboboxButton,
+// } from "@headlessui/react";
+
+// Combobox
+
+// Atau coba ini jika yang di atas tidak bekerja
+// import * as HeadlessUI from "@headlessui/react";
+// import { CheckIcon, ChevronDownIcon } from "@heroicons/react/20/solid";
+// import { Combobox, ComboboxOptions, } from "@headlessui/react";
 
 const PascaBayar = ({
     products,
@@ -42,6 +56,12 @@ const PascaBayar = ({
         error: null,
         billDetails: null,
     });
+
+    // === STATE UNTUK FILTERING DAN PENCARIAN ===
+    const [daerah, setDaerah] = useState("");
+    const [searchPascabayar, setSearchPascabayar] = useState("");
+    const [showSelectedPascabayar, setShowSelectedPascabayar] = useState(false);
+    const [comboQuery, setComboQuery] = useState("");
 
     // === FUNGSI UTAMA ===
 
@@ -90,6 +110,87 @@ const PascaBayar = ({
         return false;
     };
 
+    // === FILTERING PRODUK YANG LEBIH BAIK ===
+    const filteredProducts = useMemo(() => {
+        if (!products || !Array.isArray(products)) return [];
+
+        let result = [...products];
+
+        // Filter berdasarkan daerah
+        if (daerah.trim()) {
+            const searchTerm = daerah.toLowerCase();
+            result = result.filter(
+                (p) =>
+                    p.product_name?.toLowerCase().includes(searchTerm) ||
+                    p.area?.toLowerCase().includes(searchTerm) ||
+                    p.buyer_sku_code?.toLowerCase().includes(searchTerm)
+            );
+        }
+
+        return result;
+    }, [products, daerah]);
+
+    // Filter produk pascabayar yang sudah dipilih
+    const selectedPascabayarProducts = useMemo(() => {
+        return filteredProducts.filter(
+            (product) =>
+                (product.category === "pascabayar" ||
+                    product.product_type === "pascabayar") &&
+                selectedProduct?.id === product.id
+        );
+    }, [filteredProducts, selectedProduct]);
+
+    // Filter untuk tampilan berdasarkan toggle
+    const displayProducts = useMemo(() => {
+        if (showSelectedPascabayar) {
+            return selectedPascabayarProducts.filter(
+                (product) =>
+                    searchPascabayar === "" ||
+                    product.product_name
+                        ?.toLowerCase()
+                        .includes(searchPascabayar.toLowerCase()) ||
+                    product.area
+                        ?.toLowerCase()
+                        .includes(searchPascabayar.toLowerCase())
+            );
+        } else {
+            return filteredProducts.filter(
+                (product) =>
+                    searchPascabayar === "" ||
+                    product.product_name
+                        ?.toLowerCase()
+                        .includes(searchPascabayar.toLowerCase()) ||
+                    product.area
+                        ?.toLowerCase()
+                        .includes(searchPascabayar.toLowerCase())
+            );
+        }
+    }, [
+        showSelectedPascabayar,
+        selectedPascabayarProducts,
+        filteredProducts,
+        searchPascabayar,
+    ]);
+
+    // Filter untuk ComboBox
+    const filteredComboProducts = useMemo(() => {
+        if (!products || !Array.isArray(products)) return [];
+
+        if (comboQuery === "") {
+            return products.slice(0, 10); // Batasi tampilan awal
+        }
+
+        const query = comboQuery.toLowerCase();
+        return products
+            .filter(
+                (product) =>
+                    product.product_name?.toLowerCase().includes(query) ||
+                    product.area?.toLowerCase().includes(query) ||
+                    product.buyer_sku_code?.toLowerCase().includes(query)
+            )
+            .slice(0, 20); // Batasi hasil pencarian
+    }, [products, comboQuery]);
+
     // === FUNGSI PASCABAYAR ===
 
     // 1. INQUIRY - Cek tagihan
@@ -112,10 +213,6 @@ const PascaBayar = ({
             const productCode =
                 selectedProduct?.buyer_sku_code || products[0]?.buyer_sku_code;
 
-            if (!productCode) {
-                throw new Error("Produk tidak ditemukan");
-            }
-
             const response = await axios.post(`/api/inquiry-pln`, {
                 customer_no: customerNo,
                 buyer_sku_code: productCode,
@@ -127,13 +224,11 @@ const PascaBayar = ({
             if (response.data.success) {
                 const inquiryData = response.data.data;
 
-                // PERBAIKAN DI SINI: Simpan seluruh data response, bukan hanya mapping ke billDetails
                 setPascabayarData((prev) => ({
                     ...prev,
                     inquiryData: inquiryData,
                     refIdInquiry: response.data.ref_id,
-                    // Simpan semua data dari response untuk fleksibilitas
-                    ...inquiryData, // Spread semua properti dari inquiryData
+                    ...inquiryData,
                     billDetails: {
                         amount: parseFloat(inquiryData.price) || 0,
                         admin: parseFloat(inquiryData.admin) || 0,
@@ -358,29 +453,6 @@ const PascaBayar = ({
         paymentMethod,
         waPembeli,
     ]);
-
-    const [daerah, setDaerah] = useState("");
-    const [filteredProducts, setFilteredProducts] = useState([]);
-
-    useEffect(() => {
-        // Debounce untuk hindari terlalu banyak re-render
-        const timeoutId = setTimeout(() => {
-            if (!daerah.trim()) {
-                setFilteredProducts(products);
-                return;
-            }
-
-            const searchTerm = daerah.toLowerCase();
-            const filtered = products.filter((p) =>
-                p.product_name.toLowerCase().includes(searchTerm)
-            );
-
-            setFilteredProducts(filtered);
-        }, 300); // Delay 300ms
-
-        // Cleanup timeout
-        return () => clearTimeout(timeoutId);
-    }, [daerah, products]);
 
     // === RENDER COMPONENTS ===
 
@@ -735,7 +807,6 @@ const PascaBayar = ({
                                         </div>
                                     )}
 
-                                    {/* PERBAIKAN DI SINI: typo pascababayarData -> pascabayarData */}
                                     {pascabayarData.desc.lembar_tagihan && (
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-gray-400">
@@ -861,17 +932,6 @@ const PascaBayar = ({
 
                             {/* Ringkasan Pembayaran */}
                             <div className="pt-4 border-t border-blue-800/30">
-                                {/* <div className="flex justify-between items-center mb-2">
-                                    <span className="text-gray-400">
-                                        Harga Produk
-                                    </span>
-                                    <span className="font-medium text-gray-200">
-                                        <FormatRupiah
-                                            value={pascabayarData.price || 0}
-                                        />
-                                    </span>
-                                </div> */}
-
                                 {pascabayarData.admin > 0 && (
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-gray-400">
@@ -908,7 +968,11 @@ const PascaBayar = ({
         );
     };
 
-    // Render product selection
+    // Render product selection dengan ComboBox Headless UI
+
+    // import FormatRupiah from "@/Components/FormatRupiah";
+    // import { useState, useRef, useEffect } from "react";
+
     const renderProducts = () => {
         if (!products || products.length === 0) {
             return (
@@ -931,42 +995,249 @@ const PascaBayar = ({
             );
         }
 
+        // State untuk ComboBox
+        const [isOpen, setIsOpen] = useState(false);
+        const [searchQuery, setSearchQuery] = useState("");
+        const [filteredProducts, setFilteredProducts] = useState(
+            products.slice(0, 10)
+        );
+        const comboBoxRef = useRef(null);
+
+        // Filter produk berdasarkan query
+        useEffect(() => {
+            if (searchQuery === "") {
+                setFilteredProducts(products.slice(0, 10));
+            } else {
+                const query = searchQuery.toLowerCase();
+                const filtered = products
+                    .filter(
+                        (product) =>
+                            product.product_name
+                                ?.toLowerCase()
+                                .includes(query) ||
+                            product.area?.toLowerCase().includes(query) ||
+                            product.buyer_sku_code
+                                ?.toLowerCase()
+                                .includes(query)
+                    )
+                    .slice(0, 20);
+                setFilteredProducts(filtered);
+            }
+        }, [searchQuery, products]);
+
+        // Handle klik di luar combobox
+        useEffect(() => {
+            const handleClickOutside = (event) => {
+                if (
+                    comboBoxRef.current &&
+                    !comboBoxRef.current.contains(event.target)
+                ) {
+                    setIsOpen(false);
+                }
+            };
+
+            document.addEventListener("mousedown", handleClickOutside);
+            return () =>
+                document.removeEventListener("mousedown", handleClickOutside);
+        }, []);
+
+        // Handle pemilihan produk
+        const handleSelectProduct = (product) => {
+            setSelectedProduct(product);
+            setSearchQuery(product.product_name);
+            setIsOpen(false);
+        };
+
+        // Handle keyboard navigation
+        const handleKeyDown = (e) => {
+            if (e.key === "Escape") {
+                setIsOpen(false);
+            }
+        };
+
         return (
             <>
-                <input
-                    placeholder="cari daerah"
-                    value={daerah}
-                    onChange={(e) => setDaerah(e.target.value)}
-                    className="w-full px-4 py-3 mb-4 border rounded-xl focus:outline-none focus:ring-2 transition bg-gray-900/50 text-gray-100 border-gray-700 focus:border-green-500 focus:ring-green-500/30"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredProducts.map((product) => (
-                        <div
-                            key={product.id}
-                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg ${
-                                selectedProduct?.id === product.id
-                                    ? "shadow-lg scale-105 border-blue-500"
-                                    : "border-gray-700 hover:border-gray-500"
-                            }`}
-                            onClick={() => setSelectedProduct(product)}
-                            style={{
-                                backgroundColor:
-                                    selectedProduct?.id === product.id
-                                        ? COLORS.secondary
-                                        : COLORS.primary,
-                            }}
-                        >
-                            {selectedProduct?.id === product.id && (
-                                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                                    ✓
-                                </div>
-                            )}
-                            <div className="font-bold text-gray-100 mb-2">
-                                {product.product_name}
-                            </div>
+                {/* ComboBox Custom dengan Tailwind CSS */}
+                <div className="mb-8">
+                    <label className="block text-sm font-medium text-gray-300 mb-3">
+                        Cari & Pilih Produk
+                    </label>
+
+                    <div className="relative" ref={comboBoxRef}>
+                        {/* Input dengan tombol dropdown */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                className="w-full px-4 py-3 pr-10 border rounded-xl focus:outline-none focus:ring-2 transition bg-gray-900/50 text-gray-100 border-gray-700 focus:border-blue-500 focus:ring-blue-500/30"
+                                placeholder="Ketik nama produk, daerah"
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setIsOpen(true);
+                                }}
+                                onFocus={() => setIsOpen(true)}
+                                onKeyDown={handleKeyDown}
+                            />
+                            {/* Tombol dropdown */}
+                            <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 px-3 flex items-center"
+                                onClick={() => setIsOpen(!isOpen)}
+                            >
+                                <svg
+                                    className={`h-5 w-5 text-gray-400 transition-transform ${
+                                        isOpen ? "rotate-180" : ""
+                                    }`}
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                        clipRule="evenodd"
+                                    />
+                                </svg>
+                            </button>
                         </div>
-                    ))}
+
+                        {/* Dropdown Options */}
+                        {isOpen && (
+                            <div className="absolute mt-1 w-full max-h-60 overflow-auto rounded-xl border border-gray-700 bg-gray-800 shadow-lg z-50">
+                                {filteredProducts.length === 0 ? (
+                                    <div className="px-4 py-3 text-gray-400 text-sm">
+                                        {searchQuery
+                                            ? `Tidak ditemukan produk "${searchQuery}"`
+                                            : "Tidak ada produk"}
+                                    </div>
+                                ) : (
+                                    <div className="py-1">
+                                        {filteredProducts.map((product) => {
+                                            const isPascabayar =
+                                                product.category ===
+                                                    "pascabayar" ||
+                                                product.product_type ===
+                                                    "pascabayar";
+                                            const isSelected =
+                                                selectedProduct?.id ===
+                                                product.id;
+
+                                            return (
+                                                <div
+                                                    key={product.id}
+                                                    className={`
+                                                    flex items-center gap-2 px-3 py-2.5 cursor-pointer
+                                                    hover:bg-gray-700/50 transition
+                                                    ${
+                                                        isSelected
+                                                            ? "bg-blue-900/30"
+                                                            : ""
+                                                    }
+                                                `}
+                                                    onClick={() =>
+                                                        handleSelectProduct(
+                                                            product
+                                                        )
+                                                    }
+                                                >
+                                                    {/* Check icon untuk item terpilih */}
+                                                    <div
+                                                        className={`w-4 h-4 flex items-center justify-center ${
+                                                            isSelected
+                                                                ? "text-blue-400"
+                                                                : "invisible"
+                                                        }`}
+                                                    >
+                                                        <svg
+                                                            fill="currentColor"
+                                                            viewBox="0 0 20 20"
+                                                        >
+                                                            <path
+                                                                fillRule="evenodd"
+                                                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                                                clipRule="evenodd"
+                                                            />
+                                                        </svg>
+                                                    </div>
+
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <span
+                                                                className={`font-medium ${
+                                                                    isSelected
+                                                                        ? "text-blue-300"
+                                                                        : "text-gray-100"
+                                                                }`}
+                                                            >
+                                                                {
+                                                                    product.product_name
+                                                                }
+                                                            </span>
+                                                            <div className="flex items-center gap-1">
+                                                                {isPascabayar && (
+                                                                    <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                                                                        PASCA
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-1 text-xs text-gray-400">
+                                                            {product.area && (
+                                                                <span className="mr-3">
+                                                                    Daerah:{" "}
+                                                                    {
+                                                                        product.area
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Tombol clear jika ada produk terpilih */}
+                    {selectedProduct && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedProduct(null);
+                                setSearchQuery("");
+                            }}
+                            className="mt-2 text-sm text-red-400 hover:text-red-300 transition"
+                        >
+                            Hapus pilihan
+                        </button>
+                    )}
                 </div>
+
+                {/* Filter tambahan */}
+                {/* <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Filter Tambahan
+                    </label>
+                    <div className="flex gap-3">
+                        <input
+                            placeholder="Filter berdasarkan daerah..."
+                            value={daerah}
+                            onChange={(e) => setDaerah(e.target.value)}
+                            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition bg-gray-900/50 text-gray-100 border-gray-700 focus:border-green-500 focus:ring-green-500/30"
+                        />
+                        <input
+                            placeholder="Filter teks bebas..."
+                            value={searchPascabayar}
+                            onChange={(e) =>
+                                setSearchPascabayar(e.target.value)
+                            }
+                            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition bg-gray-900/50 text-gray-100 border-gray-700 focus:border-blue-500 focus:ring-blue-500/30"
+                        />
+                    </div>
+                </div> */}
             </>
         );
     };
@@ -976,49 +1247,20 @@ const PascaBayar = ({
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {payment.map((method) => {
-                    // Kalkulasi total harga
-                    let totalPrice = 0;
-                    let feeDetails = [];
-
-                    if (selectedProduct) {
-                        const productPrice = Number(
-                            selectedProduct.selling_price ?? 0
-                        );
-
-                        // Hitung biaya persentase
-                        let percentFee = 0;
-                        if (
-                            method.percentase_fee &&
-                            method.percentase_fee > 0
-                        ) {
-                            percentFee =
-                                (productPrice * method.percentase_fee) / 100;
-                            feeDetails.push(`${method.percentase_fee}%`);
-                        }
-
-                        // Hitung biaya nominal
-                        const nominalFee = Number(method.nominal_fee) || 0;
-                        if (nominalFee > 0) {
-                            feeDetails.push(
-                                `Rp ${nominalFee.toLocaleString()}`
-                            );
-                        }
-
-                        // Total harga
-                        totalPrice = productPrice + percentFee + nominalFee;
-                    }
+                    const isSelected = paymentMethod?.id === method.id;
 
                     return (
                         <div
                             key={method.id}
-                            className={`border-2 rounded-xl p-4 flex items-center cursor-pointer transition-all ${
-                                paymentMethod?.id === method.id
-                                    ? "shadow-lg border-green-500 bg-green-900/20"
-                                    : "border-gray-700 hover:border-gray-500"
-                            }`}
                             onClick={() => setPaymentMethod(method)}
+                            className={`border-2 rounded-xl p-4 flex items-center cursor-pointer transition-all duration-300 group ${
+                                isSelected
+                                    ? "border-green-500 bg-green-900/20 shadow-lg"
+                                    : "border-gray-700 hover:border-gray-500 hover:bg-gray-700/50"
+                            }`}
                         >
-                            <div className="w-12 h-12 rounded-lg overflow-hidden border p-2 mr-3 bg-white">
+                            {/* Logo Payment */}
+                            <div className="w-12 h-12 rounded-lg overflow-hidden border p-2 mr-3 bg-white flex-shrink-0">
                                 <img
                                     src={`${appUrl}/storage/${method.logo}`}
                                     alt={method.name}
@@ -1029,34 +1271,52 @@ const PascaBayar = ({
                                     }}
                                 />
                             </div>
+
+                            {/* Info Payment */}
                             <div className="flex-grow">
-                                <div className="font-semibold text-gray-100 uppercase">
+                                <div className="font-semibold text-gray-100 uppercase text-sm">
                                     {method.name}
                                 </div>
-                                <div className="text-sm text-gray-400 mt-1">
-                                    {selectedProduct ? (
-                                        <div>
-                                            <div
-                                                className="font-bold"
-                                                style={{
-                                                    color: COLORS.success,
-                                                }}
-                                            >
-                                                <FormatRupiah
-                                                    // value={totalPrice}
-                                                    value={calculateTotalPayment()}
-                                                />
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <span className="text-gray-500">
-                                            Pilih produk terlebih dahulu
-                                        </span>
-                                    )}
+                                <div className="text-xs text-gray-400 mt-1">
+                                    {method.payment_type}
                                 </div>
+
+                                {/* Fee Info */}
+                                {selectedProduct && (
+                                    <div className="mt-2">
+                                        <div className="text-sm font-bold text-green-400">
+                                            <FormatRupiah
+                                                value={calculateTotalPayment()}
+                                            />
+                                        </div>
+                                        {(method.percentase_fee > 0 ||
+                                            method.nominal_fee > 0) && (
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {method.percentase_fee > 0 && (
+                                                    <span>
+                                                        Fee:{" "}
+                                                        {method.percentase_fee}%
+                                                    </span>
+                                                )}
+                                                {method.nominal_fee > 0 && (
+                                                    <span>
+                                                        {method.percentase_fee >
+                                                        0
+                                                            ? " + "
+                                                            : ""}
+                                                        Rp{" "}
+                                                        {method.nominal_fee.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            {paymentMethod?.id === method.id && (
-                                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+
+                            {/* Selection Indicator */}
+                            {isSelected && (
+                                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
                                     <svg
                                         className="w-4 h-4 text-white"
                                         fill="none"
@@ -1121,57 +1381,38 @@ const PascaBayar = ({
                         </div>
                     </div>
 
-                    {/* Progress Steps */}
-                    <div className="rounded-2xl shadow-lg p-6 mb-8 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50">
-                        <div className="flex flex-wrap justify-between items-center gap-4">
-                            <StepIndicator
-                                step={1}
-                                title="Data Pelanggan"
-                                isActive={activeStep >= 1}
-                                isComplete={isAccountComplete()}
-                            />
-                            <div className="flex-1 h-px bg-gray-700"></div>
-                            <StepIndicator
-                                step={2}
-                                title="Cek Tagihan"
-                                isActive={activeStep >= 2}
-                                isComplete={!!pascabayarData.inquiryData}
-                            />
-                            <div className="flex-1 h-px bg-gray-700"></div>
-                            <StepIndicator
-                                step={3}
-                                title="Pilih Produk"
-                                isActive={activeStep >= 3}
-                                isComplete={!!selectedProduct}
-                            />
-                            <div className="flex-1 h-px bg-gray-700"></div>
-                            <StepIndicator
-                                step={4}
-                                title="Metode Bayar"
-                                isActive={activeStep >= 4}
-                                isComplete={!!paymentMethod}
-                            />
-                            <div className="flex-1 h-px bg-gray-700"></div>
-                            <StepIndicator
-                                step={5}
-                                title="Data Pembeli"
-                                isActive={activeStep >= 5}
-                                isComplete={!!waPembeli}
-                            />
-                        </div>
-                    </div>
-
                     <form onSubmit={handleSubmit}>
                         <div className="lg:flex lg:space-x-8">
                             {/* Left Column - Form (70%) */}
                             <div className="lg:w-8/12 space-y-8">
+                                {/* Step 3: Pilih Produk */}
+                                <div className="rounded-2xl shadow-lg bg-gray-800/50 backdrop-blur-sm border border-gray-700/50">
+                                    <div className="p-8">
+                                        <div className="flex items-center mb-6">
+                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 flex items-center justify-center mr-4 shadow-lg">
+                                                <span className="text-white font-bold text-xl">
+                                                    1
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-gray-100">
+                                                    Pilih Produk
+                                                </h2>
+                                                <p className="text-gray-400">
+                                                    Pilih produk yang sesuai
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {renderProducts()}
+                                    </div>
+                                </div>
                                 {/* Step 1: Data Pelanggan */}
                                 <div className="rounded-2xl shadow-lg bg-gray-800/50 backdrop-blur-sm border border-gray-700/50">
                                     <div className="p-8">
                                         <div className="flex items-center mb-6">
                                             <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center mr-4 shadow-lg">
                                                 <span className="text-white font-bold text-xl">
-                                                    1
+                                                    2
                                                 </span>
                                             </div>
                                             <div>
@@ -1188,32 +1429,7 @@ const PascaBayar = ({
                                     </div>
                                 </div>
 
-                                {/* Step 2: Pilih Produk (jika sudah ada data tagihan) */}
-                                {pascabayarData.inquiryData && (
-                                    <div className="rounded-2xl shadow-lg bg-gray-800/50 backdrop-blur-sm border border-gray-700/50">
-                                        <div className="p-8">
-                                            <div className="flex items-center mb-6">
-                                                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 flex items-center justify-center mr-4 shadow-lg">
-                                                    <span className="text-white font-bold text-xl">
-                                                        2
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <h2 className="text-2xl font-bold text-gray-100">
-                                                        Pilih Produk
-                                                    </h2>
-                                                    <p className="text-gray-400">
-                                                        Pilih produk {game.name}{" "}
-                                                        yang sesuai
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {renderProducts()}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Step 3: Metode Pembayaran (jika sudah pilih produk) */}
+                                {/* Step 4: Metode Pembayaran */}
                                 {selectedProduct && (
                                     <div className="rounded-2xl shadow-lg bg-gray-800/50 backdrop-blur-sm border border-gray-700/50">
                                         <div className="p-8">
@@ -1238,7 +1454,7 @@ const PascaBayar = ({
                                     </div>
                                 )}
 
-                                {/* Step 4: Data Pembeli */}
+                                {/* Step 5: Data Pembeli */}
                                 {paymentMethod && (
                                     <div className="rounded-2xl shadow-lg bg-gray-800/50 backdrop-blur-sm border border-gray-700/50">
                                         <div className="p-8">
@@ -1356,8 +1572,7 @@ const PascaBayar = ({
                                                     </span>
                                                 </div>
                                                 <p className="text-sm text-gray-300">
-                                                    Masukkan nomor
-                                                    pelanggan/pemilik meteran
+                                                    Masukkan nomor pelanggan
                                                 </p>
                                             </div>
                                             <div className="flex items-start">
@@ -1378,8 +1593,8 @@ const PascaBayar = ({
                                                     </span>
                                                 </div>
                                                 <p className="text-sm text-gray-300">
-                                                    Pilih metode pembayaran dan
-                                                    isi data WhatsApp
+                                                    Pilih produk dan metode
+                                                    pembayaran
                                                 </p>
                                             </div>
                                             <div className="flex items-start">
@@ -1490,6 +1705,20 @@ const PascaBayar = ({
                                                                 </span>
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Selected Product */}
+                                                {selectedProduct && (
+                                                    <div className="pb-4 border-b border-gray-700">
+                                                        <p className="text-xs text-gray-400 mb-1">
+                                                            Produk Dipilih
+                                                        </p>
+                                                        <p className="text-sm font-semibold text-gray-200">
+                                                            {
+                                                                selectedProduct.product_name
+                                                            }
+                                                        </p>
                                                     </div>
                                                 )}
 
@@ -1630,17 +1859,6 @@ const PascaBayar = ({
                             </div>
                         </div>
                     </form>
-
-                    {/* Footer */}
-                    <div className="mt-12 pt-8 border-t border-gray-800 text-center">
-                        <p className="text-sm text-gray-500">
-                            © {new Date().getFullYear()} {game.name} Pascabayar
-                            Service. All rights reserved.
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                            Proses pembayaran aman dan dilindungi
-                        </p>
-                    </div>
                 </div>
             </div>
         </AppLayout>

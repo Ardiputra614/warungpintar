@@ -355,7 +355,7 @@ const Footer = ({ aplikasi }) => {
             </div>
 
             {/* Floating CTA (Mobile) */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 p-4 z-50">
+            {/* <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 p-4 z-50">
                 <div className="flex justify-between items-center max-w-7xl mx-auto px-4">
                     <div>
                         <p className="text-white font-semibold">
@@ -372,7 +372,7 @@ const Footer = ({ aplikasi }) => {
                         Telepon
                     </a>
                 </div>
-            </div>
+            </div> */}
         </footer>
     );
 };

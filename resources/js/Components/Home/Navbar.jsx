@@ -5,8 +5,8 @@ const Navbar = ({ user }) => {
     return (
         <>
             {/* Top Navigation */}
-            <nav className="bg-[#1a191d] border-b border-amber-900">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="bg-[#1a191d]">
+                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex">
                             <div className="flex-shrink-0 flex items-center">
@@ -14,11 +14,12 @@ const Navbar = ({ user }) => {
                                     href="/"
                                     className="text-white text-xl font-bold"
                                 >
-                                    Warung Pintar
+                                    ARVE SHOP
+                                    {/* <img src="/logo.png" /> */}
                                 </Link>
                             </div>
                         </div>
-                        <div className="flex items-center">
+                        {/* <div className="flex items-center">
                             <div className="ml-3 relative">
                                 <Link
                                     href={route("profile.edit")}
@@ -39,7 +40,7 @@ const Navbar = ({ user }) => {
                                     </div>
                                 </Link>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </nav>

@@ -54,8 +54,8 @@ const Index = ({ games }) => {
             value: "PLN",
         },
         {
-            name: "Prabayar",
-            value: "Prabayar",
+            name: "Pascabayar",
+            value: "Pascabayar",
         },
     ];
 
@@ -127,14 +127,14 @@ const Index = ({ games }) => {
             {/* Modern Hero Section - Dark Theme */}
             <div className="relative overflow-hidden bg-[#37353E]">
                 {/* Animated Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#37353E] via-[#44444E] to-[#715A5A] opacity-90"></div>
-                <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-r from-purple-900/20 to-pink-900/20 transform -skew-y-3"></div>
+                <div className="absolute inset-0 opacity-90"></div>
+                <div className="absolute top-0 left-0 right-0 h-64 transform -skew-y-3"></div>
 
                 <div className="container mx-auto px-4 pt-8 pb-16 relative">
                     {/* Promo Carousel */}
                     <div ref={promoRef} className="mb-12">
                         <div className="flex justify-between items-center mb-6">
-                            <div>
+                            {/* <div>
                                 <h2 className="text-2xl font-bold text-[#D3DAD9] flex items-center gap-2">
                                     <Sparkles
                                         className="text-yellow-400"
@@ -145,7 +145,7 @@ const Index = ({ games }) => {
                                 <p className="text-gray-300">
                                     Diskon eksklusif untuk Anda
                                 </p>
-                            </div>
+                            </div> */}
                             <div className="flex gap-2">
                                 {promos.map((_, idx) => (
                                     <button
@@ -174,13 +174,13 @@ const Index = ({ games }) => {
                                     }`}
                                 >
                                     <div className="absolute inset-0 bg-black/40"></div>
-                                    <div className="absolute top-6 left-8">
+                                    {/* <div className="absolute top-6 left-8">
                                         <span
                                             className={`${promo.badgeColor} text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg`}
                                         >
                                             {promo.badge}
                                         </span>
-                                    </div>
+                                    </div> */}
                                     <div className="absolute top-6 right-8">
                                         {promo.icon}
                                     </div>
@@ -191,7 +191,7 @@ const Index = ({ games }) => {
                                         <p className="text-gray-200 mb-6">
                                             {promo.description}
                                         </p>
-                                        <button
+                                        {/* <button
                                             className="bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center gap-2 border border-white/20 hover:border-white/30"
                                             style={{
                                                 backgroundColor:
@@ -202,7 +202,7 @@ const Index = ({ games }) => {
                                         >
                                             {promo.cta}
                                             <ArrowRight size={18} />
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </div>
                             ))}
@@ -224,20 +224,19 @@ const Index = ({ games }) => {
                                 Pilih layanan yang Anda butuhkan
                             </p>
                         </div>
-                        <Link
-                            href="#"
-                            className="text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 transition-colors"
-                        >
-                            Lihat Semua <ChevronRight size={18} />
-                        </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="flex overflow-auto">
                         {services.map((service, index) => (
                             <button
                                 key={index}
                                 onClick={() => setKategori(service.value)}
-                                className={`px-3 py-3 rounded-2xl transition-all duration-300 hover:scale-[1.02] border-2 flex flex-col items-center text-center group backdrop-blur-sm`}
+                                className={`${
+                                    service.value.toLocaleLowerCase() ===
+                                    kategori.toLowerCase()
+                                        ? "bg-black md:px-3 md:py-2"
+                                        : ""
+                                } md:px-3 md:py-2 mx-2 rounded-2xl transition-all duration-300 hover:scale-[1.02] border-2 flex flex-col items-center text-center group backdrop-blur-sm`}
                             >
                                 <h3
                                     className={`font-bold text-lg mb-2 text-white`}

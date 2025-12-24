@@ -38,6 +38,7 @@ const GamesTopup = ({
     const [isCheckingPln, setIsCheckingPln] = useState(false);
     const [plnData, setPlnData] = useState(null);
     const [plnError, setPlnError] = useState(null);
+    const [isOpen, setIsOpen] = useState(false);
 
     // Cek apakah ini produk PLN
     const isPlnProduct = game.category === "pln";
@@ -324,7 +325,13 @@ const GamesTopup = ({
                                     {group.provider}
                                 </h4>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            <div
+                                className={`${
+                                    activeCategory === "pulsa"
+                                        ? "grid-cols-2"
+                                        : ""
+                                } grid md:grid-cols-3 lg:grid-cols-4 gap-3`}
+                            >
                                 {group.products.map((product) => (
                                     <ProductCard
                                         key={product.id}
@@ -347,7 +354,7 @@ const GamesTopup = ({
 
         // Untuk kategori lain, tampilkan langsung tanpa grouping
         return (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredProducts.map((product) => (
                     <ProductCard
                         key={product.id}
@@ -1034,67 +1041,6 @@ const GamesTopup = ({
                         </div>
                     </div>
 
-                    {/* Progress Steps */}
-                    <div
-                        className="rounded-2xl shadow-lg p-6 mb-6"
-                        style={{ backgroundColor: COLORS.primary }}
-                    >
-                        <div className="flex flex-wrap justify-between items-center gap-4">
-                            <StepIndicator
-                                step={1}
-                                title={
-                                    isPlnProduct ? "Nomor Meteran" : "Data Akun"
-                                }
-                                isActive={activeStep >= 1}
-                                isComplete={isAccountComplete()}
-                            />
-                            <div
-                                className="flex-1 h-px"
-                                style={{ backgroundColor: COLORS.secondary }}
-                            ></div>
-                            <StepIndicator
-                                step={2}
-                                title={
-                                    isPlnProduct
-                                        ? "Pilih Token"
-                                        : "Pilih Nominal"
-                                }
-                                isActive={activeStep >= 2}
-                                isComplete={selectedProduct !== null}
-                            />
-                            <div
-                                className="flex-1 h-px"
-                                style={{ backgroundColor: COLORS.secondary }}
-                            ></div>
-                            <StepIndicator
-                                step={3}
-                                title="Metode Bayar"
-                                isActive={activeStep >= 3}
-                                isComplete={paymentMethod !== null}
-                            />
-                            <div
-                                className="flex-1 h-px"
-                                style={{ backgroundColor: COLORS.secondary }}
-                            ></div>
-                            <StepIndicator
-                                step={4}
-                                title="Data Pembeli"
-                                isActive={activeStep >= 4}
-                                isComplete={waPembeli !== ""}
-                            />
-                            <div
-                                className="flex-1 h-px"
-                                style={{ backgroundColor: COLORS.secondary }}
-                            ></div>
-                            <StepIndicator
-                                step={5}
-                                title="Konfirmasi"
-                                isActive={activeStep === 5}
-                                isComplete={false}
-                            />
-                        </div>
-                    </div>
-
                     <form onSubmit={handleSubmit}>
                         <div className="lg:flex lg:space-x-6">
                             {/* Bagian Kiri - Form Input (70% di PC) */}
@@ -1342,7 +1288,7 @@ const GamesTopup = ({
                                             </h2>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="grid sm:grid-cols-1 lg:grid-cols-3 gap-4">
                                             {payment.map((method) => {
                                                 // Kalkulasi total harga
                                                 let totalPrice = 0;
@@ -1577,7 +1523,387 @@ const GamesTopup = ({
                                     </div>
                                 </div>
 
-                                <div className="lg:sticky lg:top-6">
+                                {/* ACCORDION CART */}
+                                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50">
+                                    <div className="max-w-7xl mx-auto px-4">
+                                        <div
+                                            className="rounded-2xl shadow-lg overflow-hidden"
+                                            style={{
+                                                backgroundColor: COLORS.primary,
+                                            }}
+                                        >
+                                            {/* HEADER (CLICKABLE) */}
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setIsOpen(!isOpen)
+                                                }
+                                                className="w-full flex justify-between items-center p-4"
+                                            >
+                                                <span className="font-bold text-gray-100">
+                                                    Konfirmasi Pembayaran
+                                                </span>
+
+                                                <svg
+                                                    className={`w-5 h-5 text-gray-300 transition-transform duration-300 ${
+                                                        isOpen
+                                                            ? "rotate-180"
+                                                            : ""
+                                                    }`}
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth="2"
+                                                        d="M19 9l-7 7-7-7"
+                                                    />
+                                                </svg>
+                                            </button>
+
+                                            {/* CONTENT (ACCORDION BODY) */}
+                                            <div
+                                                className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                                                    isOpen
+                                                        ? "max-h-[90vh]"
+                                                        : "max-h-0"
+                                                }`}
+                                            >
+                                                <div className="p-4 pt-0">
+                                                    {selectedProduct ? (
+                                                        <>
+                                                            <div
+                                                                className="rounded-2xl shadow-lg overflow-hidden"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        COLORS.primary,
+                                                                }}
+                                                            >
+                                                                <div className="p-6">
+                                                                    <h3 className="text-xl font-bold text-gray-100 mb-4">
+                                                                        Konfirmasi
+                                                                        Pembayaran
+                                                                    </h3>
+
+                                                                    <div
+                                                                        className="border rounded-lg overflow-hidden"
+                                                                        style={{
+                                                                            borderColor:
+                                                                                COLORS.secondary,
+                                                                        }}
+                                                                    >
+                                                                        <div
+                                                                            className="p-4 border-b"
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    COLORS.secondary,
+                                                                                borderColor:
+                                                                                    COLORS.secondary,
+                                                                            }}
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <div
+                                                                                    className="w-12 h-12 rounded-lg overflow-hidden border p-2 mr-3"
+                                                                                    style={{
+                                                                                        backgroundColor:
+                                                                                            COLORS.surface,
+                                                                                        borderColor:
+                                                                                            COLORS.accent,
+                                                                                    }}
+                                                                                >
+                                                                                    <img
+                                                                                        src={`${appUrl}/storage/${game.logo}`}
+                                                                                        alt={`${game.name} Logo`}
+                                                                                        className="w-full h-full object-contain"
+                                                                                    />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <h4 className="font-bold text-gray-100">
+                                                                                        {
+                                                                                            game.name
+                                                                                        }
+                                                                                    </h4>
+                                                                                    <p
+                                                                                        className="text-xs"
+                                                                                        style={{
+                                                                                            color: COLORS.accent,
+                                                                                        }}
+                                                                                    >
+                                                                                        {isPlnProduct
+                                                                                            ? "Token Listrik"
+                                                                                            : "Top Up Voucher"}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="p-4 space-y-3">
+                                                                            {isAccountComplete() && (
+                                                                                <div
+                                                                                    className="pb-3 border-b"
+                                                                                    style={{
+                                                                                        borderColor:
+                                                                                            COLORS.secondary,
+                                                                                    }}
+                                                                                >
+                                                                                    <p className="text-xs text-gray-400 mb-1">
+                                                                                        {isPlnProduct
+                                                                                            ? "Nomor Meteran"
+                                                                                            : "Akun Game"}
+                                                                                    </p>
+                                                                                    <p className="text-sm font-mono font-semibold break-all text-gray-200">
+                                                                                        {formatCustomerNo()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Tampilkan info PLN jika ada */}
+                                                                            {isPlnProduct &&
+                                                                                plnData && (
+                                                                                    <>
+                                                                                        <div
+                                                                                            className="pb-3 border-b"
+                                                                                            style={{
+                                                                                                borderColor:
+                                                                                                    COLORS.secondary,
+                                                                                            }}
+                                                                                        >
+                                                                                            <p className="text-xs text-gray-400 mb-1">
+                                                                                                Nama
+                                                                                                Pelanggan
+                                                                                            </p>
+                                                                                            <p className="text-sm font-semibold text-gray-200">
+                                                                                                {
+                                                                                                    plnData.nama
+                                                                                                }
+                                                                                            </p>
+                                                                                        </div>
+                                                                                        <div className="flex justify-between items-center">
+                                                                                            <span className="text-sm text-gray-400">
+                                                                                                Tagihan
+                                                                                                Listrik
+                                                                                            </span>
+                                                                                            <span className="font-semibold text-gray-200">
+                                                                                                <FormatRupiah
+                                                                                                    value={Number(
+                                                                                                        plnData.bill ||
+                                                                                                            0
+                                                                                                    )}
+                                                                                                />
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        {plnData.admin >
+                                                                                            0 && (
+                                                                                            <div className="flex justify-between items-center">
+                                                                                                <span className="text-sm text-gray-400">
+                                                                                                    Biaya
+                                                                                                    Admin
+                                                                                                </span>
+                                                                                                <span className="font-semibold text-gray-200">
+                                                                                                    <FormatRupiah
+                                                                                                        value={Number(
+                                                                                                            plnData.admin ||
+                                                                                                                0
+                                                                                                        )}
+                                                                                                    />
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </>
+                                                                                )}
+
+                                                                            {!isPlnProduct && (
+                                                                                <div className="flex justify-between items-center">
+                                                                                    <span className="text-sm text-gray-400">
+                                                                                        {
+                                                                                            selectedProduct.product_name
+                                                                                        }
+                                                                                    </span>
+                                                                                    <span className="font-semibold text-white">
+                                                                                        <FormatRupiah
+                                                                                            value={Number(
+                                                                                                selectedProduct.selling_price ||
+                                                                                                    0
+                                                                                            )}
+                                                                                        />
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
+
+                                                                            {paymentMethod &&
+                                                                                calculateTotalFee() >
+                                                                                    0 && (
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <span className="text-sm text-gray-400">
+                                                                                            {paymentMethod.percentase_fee >
+                                                                                            0
+                                                                                                ? `Biaya Admin (${paymentMethod.percentase_fee}%)`
+                                                                                                : "Biaya Layanan"}
+                                                                                        </span>
+                                                                                        <span
+                                                                                            className="font-semibold"
+                                                                                            style={{
+                                                                                                color: COLORS.error,
+                                                                                            }}
+                                                                                        >
+                                                                                            <FormatRupiah
+                                                                                                value={calculateTotalFee()}
+                                                                                            />
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+
+                                                                            {paymentMethod && (
+                                                                                <div
+                                                                                    className="flex justify-between items-center pt-2 border-t"
+                                                                                    style={{
+                                                                                        borderColor:
+                                                                                            COLORS.secondary,
+                                                                                    }}
+                                                                                >
+                                                                                    <span className="text-sm text-gray-400">
+                                                                                        Metode
+                                                                                        Bayar
+                                                                                    </span>
+                                                                                    <div className="flex items-center">
+                                                                                        <div
+                                                                                            className="w-5 h-5 mr-1 rounded overflow-hidden"
+                                                                                            style={{
+                                                                                                backgroundColor:
+                                                                                                    COLORS.surface,
+                                                                                            }}
+                                                                                        >
+                                                                                            <img
+                                                                                                src={`${appUrl}/storage/${paymentMethod.logo}`}
+                                                                                                alt={
+                                                                                                    paymentMethod.name
+                                                                                                }
+                                                                                                className="w-full h-full object-contain"
+                                                                                            />
+                                                                                        </div>
+                                                                                        <span className="text-sm font-semibold uppercase text-gray-200">
+                                                                                            {
+                                                                                                paymentMethod.name
+                                                                                            }
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
+                                                                            <div
+                                                                                className="flex justify-between items-center pt-3 border-t"
+                                                                                style={{
+                                                                                    borderColor:
+                                                                                        COLORS.secondary,
+                                                                                }}
+                                                                            >
+                                                                                <div>
+                                                                                    <span className="text-lg font-bold text-gray-100">
+                                                                                        Total
+                                                                                    </span>
+                                                                                    <p className="text-xs text-gray-400">
+                                                                                        Sudah
+                                                                                        termasuk
+                                                                                        semua
+                                                                                        biaya
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className="text-right">
+                                                                                    <div
+                                                                                        className="text-xl font-bold"
+                                                                                        style={{
+                                                                                            color: COLORS.success,
+                                                                                        }}
+                                                                                    >
+                                                                                        <FormatRupiah
+                                                                                            value={calculateTotalPayment()}
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="mt-4">
+                                                                        <button
+                                                                            type="submit"
+                                                                            disabled={
+                                                                                !isFormComplete
+                                                                            }
+                                                                            className={`w-full py-3 rounded-xl transition-all duration-300 transform font-bold text-lg ${
+                                                                                isFormComplete
+                                                                                    ? "text-white hover:scale-[1.02] shadow-lg hover:shadow-xl cursor-pointer"
+                                                                                    : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                                                                            }`}
+                                                                            style={
+                                                                                isFormComplete
+                                                                                    ? {
+                                                                                          background: `linear-gradient(135deg, ${COLORS.success}, ${COLORS.info})`,
+                                                                                      }
+                                                                                    : {}
+                                                                            }
+                                                                        >
+                                                                            <div className="flex items-center justify-center">
+                                                                                <svg
+                                                                                    className="w-5 h-5 mr-2"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    viewBox="0 0 24 24"
+                                                                                >
+                                                                                    <path
+                                                                                        strokeLinecap="round"
+                                                                                        strokeLinejoin="round"
+                                                                                        strokeWidth="2"
+                                                                                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                                                                                    />
+                                                                                </svg>
+                                                                                {isFormComplete
+                                                                                    ? "Bayar Sekarang"
+                                                                                    : "Lengkapi Data"}
+                                                                            </div>
+                                                                        </button>
+                                                                    </div>
+
+                                                                    <div className="mt-4 text-center">
+                                                                        <p className="text-xs text-gray-400">
+                                                                            Proses
+                                                                            aman
+                                                                            dan
+                                                                            terenkripsi
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div
+                                                            className="rounded-xl p-6 text-center"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    COLORS.primary,
+                                                                borderLeft: `2px solid ${COLORS.secondary}`,
+                                                            }}
+                                                        >
+                                                            <h1
+                                                                className="font-bold"
+                                                                style={{
+                                                                    color: COLORS.accent,
+                                                                }}
+                                                            >
+                                                                Belum ada produk
+                                                                yang dipilih
+                                                            </h1>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="lg:sticky sm:hi lg:top-6">
                                     {/* Bagian Konfirmasi Pembayaran */}
                                     {selectedProduct ? (
                                         <div
