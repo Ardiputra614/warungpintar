@@ -16,7 +16,7 @@ class HomeController extends Controller
     {
         return Inertia::render('Home/Index', [
             'title' => 'Warung Pintar',
-            'games' =>  GamesCategory::all(),
+            'games' =>  GamesCategory::where('is_active', true)->get(),
             // 'provider' => Provider::all(),
             // 'tagihan' => Tagihan::all(),            
         ]);

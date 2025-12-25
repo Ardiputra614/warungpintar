@@ -223,24 +223,11 @@ const Game = ({ games }) => {
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-white rounded-2xl border border-gray-200">
-                    <Gamepad2 className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-700 mb-2">
-                        Game tidak ditemukan
+                <div className="text-center py-16 rounded-lg border border-dashed border-white">
+                    {/* <Gamepad2 className="w-20 h-20 text-gray-300 mx-auto mb-4" /> */}
+                    <h3 className="text-xl font-bold text-white mb-2">
+                        Data tidak ditemukan
                     </h3>
-                    <p className="text-gray-500 max-w-md mx-auto">
-                        Tidak ada game yang cocok dengan pencarian "
-                        {searchQuery}"
-                    </p>
-                    <button
-                        onClick={() => {
-                            setSearchQuery("");
-                            setActiveCategory("all");
-                        }}
-                        className="mt-6 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        Reset Pencarian
-                    </button>
                 </div>
             )}
         </div>
