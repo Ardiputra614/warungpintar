@@ -226,7 +226,7 @@ const Index = ({ games }) => {
                         </div>
                     </div>
 
-                    <div className="flex overflow-auto">
+                    <div className="flex overflow-auto whitespace-nowrap">
                         {services.map((service, index) => (
                             <button
                                 key={index}
@@ -234,12 +234,12 @@ const Index = ({ games }) => {
                                 className={`${
                                     service.value.toLocaleLowerCase() ===
                                     kategori.toLowerCase()
-                                        ? "bg-black md:px-3 md:py-2"
+                                        ? "bg-black"
                                         : ""
-                                } md:px-3 md:py-2 mx-2 rounded-2xl transition-all duration-300 hover:scale-[1.02] border-2 flex flex-col items-center text-center group backdrop-blur-sm`}
+                                } flex-shrink-0 px-3 py-2 mx-2 rounded-2xl transition-all duration-300 hover:scale-[1.02] border-2 flex flex-col items-center text-center group backdrop-blur-sm`}
                             >
                                 <h3
-                                    className={`font-bold text-lg mb-2 text-white`}
+                                    className={`font-bold text-lg mb-2 text-white whitespace-nowrap`}
                                 >
                                     {service.name}
                                 </h3>
