@@ -10,6 +10,8 @@ export default defineConfig({
         }),
         react(),
     ],
+
+    //ini tambahan
     build: {
         target: "es2017",
         chunkSizeWarningLimit: 1000, // optional (1MB)
