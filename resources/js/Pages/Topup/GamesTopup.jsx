@@ -354,7 +354,7 @@ const GamesTopup = ({
 
         // Untuk kategori lain, tampilkan langsung tanpa grouping
         return (
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredProducts.map((product) => (
                     <ProductCard
                         key={product.id}
@@ -1903,7 +1903,7 @@ const GamesTopup = ({
                                     </div>
                                 </div>
 
-                                <div className="lg:sticky sm:hi lg:top-6">
+                                <div className="lg:sticky fixed lg:top-6">
                                     {/* Bagian Konfirmasi Pembayaran */}
                                     {selectedProduct ? (
                                         <div
