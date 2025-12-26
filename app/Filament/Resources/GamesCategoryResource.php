@@ -74,6 +74,12 @@ class GamesCategoryResource extends Resource
                                                     ])                                            
                                                     ->required()
                                                     ->label('Kategory'),
+                                                Forms\Components\Select::make('is_active')
+                                                    ->options([
+                                                        true => 'ON', false => 'OFF'
+                                                    ])                                            
+                                                    ->required()
+                                                    ->label('ACTIVE'),
                                             ]),
 
                                     ]),
@@ -174,14 +180,14 @@ class GamesCategoryResource extends Resource
                                             ]),
                                     ]),
 
-                                Section::make('Validasi')
-                                    ->schema([
-                                        Forms\Components\Textarea::make('validation_rules')
-                                            ->label('Aturan Validasi')
-                                            ->rows(2)
-                                            ->helperText('Aturan validasi dalam format JSON. Contoh: {"user_id": "required|numeric", "server_id": "required"}')
-                                            ->nullable(),
-                                    ]),
+                                // Section::make('Validasi')
+                                //     ->schema([
+                                //         Forms\Components\Textarea::make('validation_rules')
+                                //             ->label('Aturan Validasi')
+                                //             ->rows(2)
+                                //             ->helperText('Aturan validasi dalam format JSON. Contoh: {"user_id": "required|numeric", "server_id": "required"}')
+                                //             ->nullable(),
+                                //     ]),
                             ]),                                                    
                     ])
                     ->columnSpanFull(),
