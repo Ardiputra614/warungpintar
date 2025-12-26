@@ -84,7 +84,7 @@ const Footer = ({ aplikasi }) => {
                     </div>
 
                     {/* Quick Links - Enhanced */}
-                    <div className="space-y-6">
+                    {/* <div className="space-y-6">
                         <h3 className="text-lg font-semibold text-[#D3DAD9] flex items-center gap-2">
                             <Gamepad2 size={18} className="text-purple-400" />
                             Navigasi Cepat
@@ -131,7 +131,7 @@ const Footer = ({ aplikasi }) => {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </div> */}
 
                     {/* Information - Enhanced */}
                     <div className="space-y-6">
@@ -144,11 +144,11 @@ const Footer = ({ aplikasi }) => {
                                 { name: "Syarat & Ketentuan", href: "/terms" },
                                 { name: "Kebijakan Privasi", href: "/privacy" },
                                 { name: "FAQ", href: "/faq" },
-                                {
-                                    name: "Cara Pembayaran",
-                                    href: "/payment-guide",
-                                },
-                                { name: "Tentang Kami", href: "/about" },
+                                // {
+                                //     name: "Cara Pembayaran",
+                                //     href: "/payment-guide",
+                                // },
+                                // { name: "Tentang Kami", href: "/about" },
                                 { name: "Kontak", href: "/contact" },
                             ].map((item) => (
                                 <li key={item.name}>
@@ -298,46 +298,18 @@ const Footer = ({ aplikasi }) => {
                             <p className="text-gray-400 text-sm">
                                 © {currentYear}{" "}
                                 <span className="text-purple-400 font-semibold">
-                                    Warung Pintar
+                                    ARVENAZ
                                 </span>
                                 . All rights reserved.
                             </p>
                             <p className="text-gray-500 text-xs mt-1">
-                                PT. Warung Pintar Digital Indonesia • NPWP:
-                                12.345.678.9-012.345
+                                ARFENAZ MVA
                             </p>
-                        </div>
-
-                        <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
-                            <a
-                                href="#"
-                                className="hover:text-purple-400 transition-colors"
-                            >
-                                Kebijakan Cookie
-                            </a>
-                            <a
-                                href="#"
-                                className="hover:text-purple-400 transition-colors"
-                            >
-                                Disclaimer
-                            </a>
-                            <a
-                                href="#"
-                                className="hover:text-purple-400 transition-colors"
-                            >
-                                Sitemap
-                            </a>
-                            <a
-                                href="#"
-                                className="hover:text-purple-400 transition-colors"
-                            >
-                                Bahasa: 🇮🇩 Indonesia
-                            </a>
                         </div>
                     </div>
 
                     {/* Trust Badges */}
-                    <div className="flex flex-wrap justify-center gap-6 mt-8 pt-6 border-t border-gray-700/30">
+                    {/* <div className="flex flex-wrap justify-center gap-6 mt-8 pt-6 border-t border-gray-700/30">
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                             <Shield size={12} className="text-green-500" />
                             <span>SSL Secured</span>
@@ -350,7 +322,7 @@ const Footer = ({ aplikasi }) => {
                             <span>🔒</span>
                             <span>PCI DSS Compliant</span>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
 
