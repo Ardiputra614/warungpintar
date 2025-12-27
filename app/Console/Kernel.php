@@ -19,9 +19,13 @@ class Kernel extends ConsoleKernel
         ->runInBackground();
 
         $schedule->call(function () {
-            app(\App\Services\DigiflazzProductService::class)
-                ->syncStatus();
-        })->everyTenMinutes()->withoutOverlapping();
+        app(\App\Services\DigiflazzProductService::class)
+        ->syncStatus();
+        })
+        ->everyTenMinutes()
+        ->name('digiflazz-sync-status')
+        ->withoutOverlapping();
+
     }
 
     /**
