@@ -134,115 +134,117 @@ private function getDefaultExample($format)
     }
         
     public function inquiryPln(Request $request)
-{
-    $username = env('DIGIFLAZZ_USERNAME');
-    $prodKey = env('DIGIFLAZZ_PROD_KEY');
-    // Log::info($request->all());
-    $customer_no = $request->customer_no;
-    
-    // Validasi sederhana
-    if (empty($customer_no)) {
-        return [
-            'success' => false,
-            'message' => 'Nomor pelanggan tidak valid',
-            'data' => null
-        ];
-    }
-    
-    $signature = md5($username . $prodKey . $customer_no);
-
-    if ($request->input('category') === 'prabayar') {
-        try {
-            $signPrabayar = md5($username . $prodKey . "some1d");
-            $response = Http::post('https://api.digiflazz.com/v1/transaction', [
-                // "commands" => "inq-pasca",
-                // "username" => $username, // Variabel yang sudah didefinisikan
-                // "buyer_sku_code" => "pln",
-                // "customer_no" => $customer_no, // Pakai dari input
-                // "ref_id" => 'test1', // PASTIKAN SAMA DENGAN YANG DIHITUNG DI SIGNATURE
-                // "testing" => true,
-                // "sign" => $signPrabayar // Signature yang sudah dihitung dengan benar
-                "commands" => "inq-pasca",
-                "username" => $username,
-                "buyer_sku_code" => "pdam",
-                "customer_no" => $request->input('customer_no'),
-                "ref_id" => "some1d",
-                "sign" => $signPrabayar
-            ]);
-            
-            $responseData = $response->json();
-            Log::info('Response Digiflazz Inquiry:', $responseData);
-
-            $rc = $responseData['data']['rc'] ?? null;
-            
-            if ($rc == '00') {
-                Log::info("✅ Inquiry Berhasil");                
-                return [
-                    'success' => true,
-                    'message' => 'Inquiry berhasil',
-                    'data' => $responseData['data'],                    
-                ];
-            } else {
-                $message = $responseData['data']['message'] ?? 'Inquiry gagal';
-                Log::warning("❌ Inquiry gagal: {$message}");
-                return [
-                    'success' => false,
-                    'message' => $message,
-                    'data' => $responseData['data'] ?? null
-                ];
-            }
-        } catch (\Exception $e) {
-            Log::error('Error inquiry: ' . $e->getMessage());
+    {
+        $username = env('DIGIFLAZZ_USERNAME');
+        $prodKey = env('DIGIFLAZZ_PROD_KEY');
+        $customer_no = $request->customer_no;
+        
+        
+        
+        // Validasi sederhana
+        if (empty($customer_no)) {
             return [
                 'success' => false,
-                'message' => 'Terjadi kesalahan sistem',
-                'data' => null
-            ];
-        }    
-    } else {
-        try {
-            $response = Http::post('https://api.digiflazz.com/v1/inquiry-pln', [
-                "username" => $username,
-                "customer_no" => $customer_no,
-                "sign" => $signature,
-            ]);
-            
-            $responseData = $response->json();
-            
-            // Cek response code
-            $rc = $responseData['data']['rc'] ?? null;
-            
-            if ($rc == '00') {
-                Log::info("✅ Inquiry PLN berhasil: {$customer_no}");
-                
-                return [
-                    'success' => true,
-                    'message' => 'Inquiry berhasil',
-                    'data' => $responseData['data']
-                ];
-            } else {
-                $message = $responseData['data']['message'] ?? 'Inquiry gagal';
-                Log::warning("❌ Inquiry PLN gagal: {$customer_no} - {$message}");
-                
-                return [
-                    'success' => false,
-                    'message' => $message,
-                    'data' => $responseData['data'] ?? null
-                ];
-            }
-            
-        } catch (\Exception $e) {
-            Log::error('Error PLN inquiry: ' . $e->getMessage());
-            
-            return [
-                'success' => false,
-                'message' => 'Terjadi kesalahan sistem',
+                'message' => 'Nomor pelanggan tidak valid',
                 'data' => null
             ];
         }
-    }
-    
-}    
+        
+        $signature = md5($username . $prodKey . $customer_no);
+        Log::info($signature);
+
+        if ($request->input('category') === 'pascabayar') {
+            try {
+                $signPrabayar = md5($username . $prodKey . "some1d");
+                $response = Http::post('https://api.digiflazz.com/v1/transaction', [
+                    // "commands" => "inq-pasca",
+                    // "username" => $username, // Variabel yang sudah didefinisikan
+                    // "buyer_sku_code" => "pln",
+                    // "customer_no" => $customer_no, // Pakai dari input
+                    // "ref_id" => 'test1', // PASTIKAN SAMA DENGAN YANG DIHITUNG DI SIGNATURE
+                    // "testing" => true,
+                    // "sign" => $signPrabayar // Signature yang sudah dihitung dengan benar
+                    "commands" => "inq-pasca",
+                    "username" => $username,
+                    "buyer_sku_code" => "pdam",
+                    "customer_no" => $request->input('customer_no'),
+                    "ref_id" => "some1d",
+                    "sign" => $signPrabayar
+                ]);
+                
+                $responseData = $response->json();
+                Log::info('Response Digiflazz Inquiry:', $responseData);
+
+                $rc = $responseData['data']['rc'] ?? null;
+                
+                if ($rc == '00') {
+                    Log::info("✅ Inquiry Berhasil");                
+                    return [
+                        'success' => true,
+                        'message' => 'Inquiry berhasil',
+                        'data' => $responseData['data'],                    
+                    ];
+                } else {
+                    $message = $responseData['data']['message'] ?? 'Inquiry gagal';
+                    Log::warning("❌ Inquiry gagal: {$message}");
+                    return [
+                        'success' => false,
+                        'message' => $message,
+                        'data' => $responseData['data'] ?? null
+                    ];
+                }
+            } catch (\Exception $e) {
+                Log::error('Error inquiry: ' . $e->getMessage());
+                return [
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan sistem',
+                    'data' => null
+                ];
+            }    
+        } else {
+            try {
+                $response = Http::post('https://api.digiflazz.com/v1/inquiry-pln', [
+                    "username" => $username,
+                    "customer_no" => $customer_no,
+                    "sign" => $signature,
+                ]);
+                
+                $responseData = $response->json();
+                
+                // Cek response code
+                $rc = $responseData['data']['rc'] ?? null;
+                
+                if ($rc == '00') {
+                    Log::info("✅ Inquiry PLN berhasil: {$customer_no}");
+                    
+                    return [
+                        'success' => true,
+                        'message' => 'Inquiry berhasil',
+                        'data' => $responseData['data']
+                    ];
+                } else {
+                    $message = $responseData['data']['message'] ?? 'Inquiry gagal';
+                    Log::warning("❌ Inquiry PLN gagal: {$customer_no} - {$message}");
+                    
+                    return [
+                        'success' => false,
+                        'message' => $message,
+                        'data' => $responseData['data'] ?? null
+                    ];
+                }
+                
+            } catch (\Exception $e) {
+                Log::error('Error PLN inquiry: ' . $e->getMessage());
+                
+                return [
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan sistem',
+                    'data' => null
+                ];
+            }
+        }
+        
+    }    
     
 
 }

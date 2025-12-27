@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Produk;
+use App\Services\DigiflazzProductService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -19,6 +20,16 @@ class ProdukController extends Controller
 
         return response()->json($data);
     }
+
+    public function dataproduk(DigiflazzProductService $service)
+{
+    $service->syncStatus();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Produk berhasil di-sync'
+    ]);
+}
 
     public function index()
     {

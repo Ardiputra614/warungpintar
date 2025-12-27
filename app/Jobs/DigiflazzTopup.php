@@ -3,11 +3,12 @@
 namespace App\Jobs;
 
 use App\Models\Transaction;
+use App\Services\DigiflazzBalanceService;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http as HttpClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -17,85 +18,131 @@ class DigiflazzTopup implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $order;
+    public int $orderId;
+    public int $tries = 5;
+    public int $backoff = 120;
 
-    public $tries = 5; // total max attempts
-    public $backoff = 120; // delay antar retry dalam detik (2 menit)
-
-    public function __construct(Transaction $order)
+    public function __construct(int $orderId)
     {
-        $this->order = $order;
+        $this->orderId = $orderId;
     }
 
-    public function handle(): void
+    public function handle()
     {
-        $refId = $this->order->order_id;
-        $signature = md5(env('DIGIFLAZZ_USERNAME') . env('DIGIFLAZZ_PROD_KEY') . $refId);
+        $order = Transaction::with('product')->find($this->orderId);
 
-        $response = Http::post('https://api.digiflazz.com/v1/transaction', [
-            "username" => env('DIGIFLAZZ_USERNAME'),
-            "buyer_sku_code" => $this->order->buyer_sku_code,
-            "customer_no" => $this->order->customer_no,
-            "ref_id" => $refId,
-            "testing" => false,
-            "sign" => $signature,
-        ]);
+        if (! $order || $order->digiflazz_status === 'success') {
+            return;
+        }
 
-        $responseData = json_decode($response, true);
-        
-         Log::info('DigiFlazz Request:', [
-            'ref_id' => $refId,
-            'sku' => $this->order->buyer_sku_code,
-            'customer_no' => $this->order->customer_no,
-            'signature' => $signature
-        ]);
+        $refId = $order->order_id;
+        $lock = Cache::lock("digiflazz_order_$refId", 300);
 
-        if (($responseData['data']['rc'] ?? null) == '00') {
-            Cache::forget('transkey_' . $refId);
-            Log::info("✅ Topup success for order {$refId}.", $responseData['data']);
-            
-            // Update order dengan data lengkap
-            $this->order->update([
-                'digiflazz_status' => $data['status'] ?? 'Sukses',
-                'status_message' => $data['message'] ?? 'Topup berhasil',
-                'serial_number' => $data['sn'] ?? null,
-                'ref_id' => $data['ref_id'] ?? $refId,
-                'digiflazz_response' => $responseData['data'],
-                'updated_at' => now()
-            ]);
+        if (! $lock->get()) return;
 
-            // Kirim notifikasi via Fonnte
-            $this->sendWhatsAppNotification("Topup berhasil untuk order ID: {$refId}");
-
-        } else {
-            $error = $responseData['data']['message'] ?? 'Unknown error';
-            Log::warning("❌ Topup failed for order {$refId}. Reason: {$error}");
-
-            $this->order->update([
-                'status' => 'failed',
-                'message' => $error,
-            ]);
-
-            // Jika attempt terakhir dan tetap gagal, kirim notifikasi ke admin (opsional)
-            if ($this->attempts() >= $this->tries) {
-                Log::error("🚨 Max retry reached for order {$refId}");
-                $this->sendWhatsAppNotification("Topup GAGAL untuk order {$refId} setelah beberapa kali percobaan.");
+        try {
+            // ⏰ CUTOFF PRODUK
+            if ($this->isProductCutoff($order->product)) {
+                $this->setPending($order, 'Cutoff produk');
+                return;
             }
 
-            // Akan retry otomatis berdasarkan konfigurasi Laravel (tries dan backoff)
-            throw new \Exception("Topup gagal, akan dicoba ulang...");
+            // 🔒 DEBIT SALDO
+            DigiflazzBalanceService::debit($order->purchase_price);
+
+            // 📤 HIT DIGIFLAZZ
+            $res = Http::timeout(20)->post(
+                'https://api.digiflazz.com/v1/transaction',
+                [
+                    'username' => config('services.digiflazz.username'),
+                    'buyer_sku_code' => $order->buyer_sku_code,
+                    'customer_no' => $order->customer_no,
+                    'ref_id' => $refId,
+                    'sign' => md5(
+                        config('services.digiflazz.username') .
+                        config('services.digiflazz.prod_key') .
+                        $refId
+                    ),
+                ]
+            );
+
+            $data = $res->json('data') ?? [];
+
+            // ✅ SUKSES
+            if (($data['rc'] ?? '') === '00') {
+                $order->update([
+                    'digiflazz_status' => 'success',
+                    'status_message' => $data['message'],
+                    'digiflazz_response' => $data,
+                ]);
+                return;
+            }
+
+            // ⏳ CUTOFF DIGIFLAZZ
+            if ($this->isApiCutoff($data)) {
+                DigiflazzBalanceService::credit($order->purchase_price);
+                $this->setPending($order, $data['message'] ?? 'Cutoff Digiflazz');
+                return;
+            }
+
+            throw new \Exception($data['message'] ?? 'Topup gagal');
+
+        } catch (\Throwable $e) {
+            DigiflazzBalanceService::credit($order->purchase_price);
+
+            $order->update([
+                'digiflazz_status' => 'failed',
+                'status_message' => $e->getMessage(),
+            ]);
+
+            throw $e;
+
+        } finally {
+            optional($lock)->release();
         }
     }
 
-    protected function sendWhatsAppNotification($message): void
-    {
-        $response = HttpClient::withHeaders([
-            'Authorization' => 'Bearer ' . env('FONNTE_TOKEN'),
-        ])->post('https://api.fonnte.com/send', [
-            'target' => $this->order->user->phone ?? env('ADMIN_PHONE'),
-            'message' => $message,
-        ]);
+    // ================= HELPERS =================
 
-        Log::info('📩 WA notification sent. Response: ' . $response->body());
+    private function isApiCutoff(array $data): bool
+    {
+        return str_contains(strtolower($data['message'] ?? ''), 'cut')
+            || in_array($data['rc'] ?? '', ['58', '66']);
+    }
+
+    private function isProductCutoff($product): bool
+    {
+        if (! $product || ! $product->start_cutoff || ! $product->end_cutoff) {
+            return false;
+        }
+
+        $now = Carbon::now();
+        $start = Carbon::createFromFormat('H:i:s', $product->start_cutoff);
+        $end   = Carbon::createFromFormat('H:i:s', $product->end_cutoff);
+
+        // lintas hari (23:30 - 00:30)
+        if ($start->greaterThan($end)) {
+            return $now->gte($start) || $now->lte($end);
+        }
+
+        return $now->between($start, $end);
+    }
+
+    private function setPending(Transaction $order, string $message): void
+    {
+        $order->increment('retry_count');
+
+        $order->update([
+            'digiflazz_status' => 'pending',
+            'retry_at' => $this->nextRetry(),
+            'status_message' => $message,
+        ]);
+    }
+
+    private function nextRetry(): Carbon
+    {
+        return now()->hour >= 23
+            ? now()->addDay()->setTime(0, 35)
+            : now()->addMinutes(10);
     }
 }

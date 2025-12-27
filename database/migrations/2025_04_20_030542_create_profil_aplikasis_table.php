@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('application_name');
             $table->string('application_fee'); //nominal
-            $table->string('saldo');
+            $table->decimal('saldo');
             $table->string('logo');
             $table->timestamps();
         });

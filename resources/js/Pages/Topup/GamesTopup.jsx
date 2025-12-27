@@ -1,8 +1,8 @@
 import FormatRupiah from "@/Components/FormatRupiah";
 import AppLayout from "@/Layouts/AppLayout";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { createInertiaApp } from "@inertiajs/react";
+import Pusher from "pusher-js";
 
 const GamesTopup = ({
     products,
@@ -40,14 +40,374 @@ const GamesTopup = ({
     const [plnError, setPlnError] = useState(null);
     const [isOpen, setIsOpen] = useState(false);
 
+    // State untuk produk dengan real-time updates
+    const [productList, setProductList] = useState(products);
+
+    // Refs untuk Pusher
+    const pusherRef = useRef(null);
+    const channelRef = useRef(null);
+
     // Cek apakah ini produk PLN
     const isPlnProduct = game.category === "pln";
+
+    // ==================== PUSHER CONFIGURATION ====================
+    useEffect(() => {
+        // Setup Pusher connection
+        const pusher = new Pusher(import.meta.env.VITE_PUSHER_APP_KEY, {
+            cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || "ap1",
+            forceTLS: true,
+            authEndpoint: "/broadcasting/auth",
+            auth: {
+                headers: {
+                    "X-CSRF-Token": document.querySelector(
+                        'meta[name="csrf-token"]'
+                    )?.content,
+                },
+            },
+        });
+
+        // Connection events untuk debugging
+        pusher.connection.bind("connected", () => {
+            console.log("✅ Pusher connected successfully");
+        });
+
+        pusher.connection.bind("error", (err) => {
+            console.error("❌ Pusher connection error:", err);
+        });
+
+        // Subscribe to channel umum 'produk-status' (sesuai dengan broadcastOn() di event)
+        const channelName = "produk-status";
+        const channel = pusher.subscribe(channelName);
+
+        console.log(`✅ Subscribed to Pusher channel: ${channelName}`);
+
+        // Listen untuk event 'produk.updated' (sesuai dengan broadcastAs() di event)
+        channel.bind("produk.updated", (data) => {
+            console.log("📢 Product update received from Pusher:", data);
+            if (!data.buyer_sku_code) {
+                console.error(
+                    "❌ Invalid data from Pusher: missing buyer_sku_code",
+                    data
+                );
+                return;
+            }
+            handleProductUpdate(data);
+        });
+
+        // HAPUS: channel.bind("AllProductsUpdated", ...) karena event ini tidak ada
+        // Debug: log semua event yang masuk
+        channel.bind_global((eventName, eventData) => {
+            console.log(`🔍 Pusher Event: ${eventName}`, eventData);
+        });
+
+        // Save refs untuk cleanup
+        pusherRef.current = pusher;
+        channelRef.current = channel;
+
+        // Cleanup function
+        return () => {
+            console.log("🧹 Cleaning up Pusher connection");
+            if (channelRef.current) {
+                channelRef.current.unbind_all();
+                channelRef.current.unsubscribe();
+            }
+            if (pusherRef.current) {
+                pusherRef.current.disconnect();
+            }
+        };
+    }, [game.id]);
+
+    // ==================== HANDLE PRODUCT UPDATE ====================
+    const handleProductUpdate = (data) => {
+        console.log("🔄 Processing product update:", data);
+
+        setProductList((prevProducts) =>
+            prevProducts.map((product) => {
+                // Cocokkan berdasarkan buyer_sku_code
+                if (product.buyer_sku_code === data.buyer_sku_code) {
+                    console.log(
+                        `🔄 Updating product: ${product.product_name} (SKU: ${product.buyer_sku_code})`
+                    );
+
+                    const updatedProduct = {
+                        ...product,
+                        buyer_product_status: data.buyer_product_status,
+                        seller_product_status: data.seller_product_status,
+                        last_updated:
+                            data.timestamp || new Date().toISOString(),
+                    };
+
+                    // Hitung status aktif baru
+                    const isNowActive = calculateIsActive(
+                        data.buyer_product_status,
+                        data.seller_product_status
+                    );
+
+                    // Hitung status aktif sebelumnya
+                    const wasActive = calculateIsActive(
+                        product.buyer_product_status,
+                        product.seller_product_status
+                    );
+
+                    // Cek jika produk yang sedang dipilih diupdate
+                    if (
+                        selectedProduct?.buyer_sku_code === data.buyer_sku_code
+                    ) {
+                        // Jika sebelumnya aktif, sekarang tidak aktif
+                        if (wasActive && !isNowActive) {
+                            console.log(
+                                `⚠️ Selected product became inactive: ${product.product_name}`
+                            );
+                            showNotification(
+                                "Produk Tidak Tersedia",
+                                `${product.product_name} sedang tidak tersedia.`,
+                                "warning"
+                            );
+
+                            // Deselect product
+                            setTimeout(() => {
+                                setSelectedProduct(null);
+                            }, 500);
+                        }
+                        // Jika sebelumnya tidak aktif, sekarang aktif
+                        else if (!wasActive && isNowActive) {
+                            console.log(
+                                `✅ Selected product became active: ${product.product_name}`
+                            );
+                            showNotification(
+                                "Produk Tersedia Kembali",
+                                `${product.product_name} sekarang tersedia.`,
+                                "success"
+                            );
+                        }
+                    }
+
+                    return updatedProduct;
+                }
+                return product;
+            })
+        );
+    };
+
+    // ==================== NOTIFICATION FUNCTION ====================
+    const showNotification = (title, message, type = "info") => {
+        // Create notification element
+        const notification = document.createElement("div");
+        notification.className = `fixed top-4 right-4 z-50 rounded-lg p-4 shadow-lg transform transition-all duration-300`;
+        notification.style.backgroundColor = COLORS[type] + "20";
+        notification.style.border = `1px solid ${COLORS[type]}40`;
+        notification.style.minWidth = "300px";
+        notification.style.maxWidth = "400px";
+        notification.style.animation = "slideIn 0.3s ease-out forwards";
+
+        const iconColor = COLORS[type];
+        const icon = {
+            info: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>`,
+            warning: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.24 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>`,
+            error: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>`,
+            success: `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>`,
+        }[type];
+
+        notification.innerHTML = `
+            <div class="flex items-start">
+                <div class="flex-shrink-0 mr-3" style="color: ${iconColor}">
+                    ${icon}
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-bold text-gray-100" style="color: ${iconColor}">${title}</h4>
+                    <p class="text-sm text-gray-300 mt-1">${message}</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-gray-400 hover:text-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto remove setelah 5 detik
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.style.transform = "translateX(100%)";
+                notification.style.opacity = "0";
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }
+        }, 5000);
+    };
+
+    // ==================== CSS ANIMATION ====================
+    useEffect(() => {
+        // Add CSS animation
+        const style = document.createElement("style");
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        return () => {
+            document.head.removeChild(style);
+        };
+    }, []);
+
+    // ==================== PRODUCT CARD COMPONENT ====================
+    // Tambah di bagian atas component GamesTopup, setelah state declarations
+    const calculateIsActive = (buyerStatus, sellerStatus) => {
+        return buyerStatus !== false && sellerStatus !== false;
+    };
+
+    // Update di ProductCard component
+    const ProductCard = ({ product, selectedProduct, onSelect, color }) => {
+        const isSelected = selectedProduct?.id === product.id;
+
+        // Hitung is_active berdasarkan kedua status
+        const isProductActive = calculateIsActive(
+            product.buyer_product_status,
+            product.seller_product_status
+        );
+
+        // Jika produk tidak aktif
+        if (!isProductActive) {
+            return (
+                <div
+                    className="relative border-2 rounded-xl p-4 cursor-not-allowed opacity-60"
+                    style={{
+                        backgroundColor: COLORS.secondary + "80",
+                        borderColor: COLORS.error + "40",
+                    }}
+                    title="Produk tidak tersedia untuk sementara"
+                >
+                    <div className="absolute top-2 right-2">
+                        <div
+                            className="text-xs px-2 py-1 rounded-full font-medium"
+                            style={{
+                                backgroundColor: COLORS.error + "30",
+                                color: COLORS.error,
+                                border: `1px solid ${COLORS.error}40`,
+                            }}
+                        >
+                            TIDAK AKTIF
+                        </div>
+                    </div>
+                    <div className="font-bold text-gray-400 mb-2 line-clamp-2">
+                        {product.product_name}
+                    </div>
+                    <div className="text-lg font-bold text-gray-500">
+                        <FormatRupiah value={product.selling_price} />
+                    </div>
+                    {product.description && (
+                        <div className="text-xs text-gray-500 mt-2 line-clamp-2">
+                            {product.description}
+                        </div>
+                    )}
+                    <div className="mt-2 text-xs text-gray-600">
+                        <span className="inline-flex items-center">
+                            <svg
+                                className="w-3 h-3 mr-1"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    fillRule="evenodd"
+                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                            Sedang dalam maintenance
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+
+        // Produk aktif
+        return (
+            <div
+                className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:transform hover:-translate-y-1 ${
+                    isSelected
+                        ? "shadow-lg scale-105 border-opacity-100"
+                        : "border-gray-700 hover:border-gray-500 border-opacity-50"
+                }`}
+                onClick={() => onSelect(product)}
+                style={{
+                    backgroundColor: isSelected
+                        ? `${color}20`
+                        : COLORS.secondary,
+                    borderColor: isSelected ? color : "transparent",
+                }}
+            >
+                {isSelected && (
+                    <div
+                        className="absolute -top-2 -right-2 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md"
+                        style={{
+                            backgroundColor: color,
+                            boxShadow: `0 2px 4px ${color}40`,
+                        }}
+                    >
+                        ✓
+                    </div>
+                )}
+
+                {/* Status indicator */}
+                {/* <div className="absolute top-2 left-2">
+                    <div
+                        className="w-2 h-2 rounded-full animate-pulse"
+                        style={{ backgroundColor: COLORS.success }}
+                        title="Produk aktif dan tersedia"
+                    ></div>
+                </div> */}
+
+                <div className="font-bold text-gray-100 mb-2 line-clamp-2">
+                    {product.product_name}
+                </div>
+                <div className="text-lg font-bold text-white">
+                    <FormatRupiah value={product.selling_price} />
+                </div>
+                {product.description && (
+                    <div className="text-xs text-gray-400 mt-2 line-clamp-2">
+                        {product.description}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ==================== FUNGSI UTILITAS ====================
 
     // Fungsi untuk mendapatkan semua kategori yang tersedia
     const getAvailableCategories = () => {
         const categories = {};
 
-        products.forEach((product) => {
+        // Filter hanya produk yang aktif
+        const activeProducts = productList.filter(
+            (product) =>
+                product.buyer_product_status !== false &&
+                product.seller_product_status !== false
+        );
+
+        activeProducts.forEach((product) => {
             const cat = product.category || "Lainnya";
             if (!categories[cat]) {
                 categories[cat] = 0;
@@ -161,8 +521,13 @@ const GamesTopup = ({
 
     // Cek apakah perlu menampilkan tab (hanya untuk Pulsa dan Data)
     const shouldShowTabs = () => {
-        const hasPulsa = products.some((p) => p.category === "Pulsa");
-        const hasData = products.some((p) => p.category === "Data");
+        const activeProducts = productList.filter(
+            (p) =>
+                p.buyer_product_status !== false &&
+                p.seller_product_status !== false
+        );
+        const hasPulsa = activeProducts.some((p) => p.category === "Pulsa");
+        const hasData = activeProducts.some((p) => p.category === "Data");
         return hasPulsa || hasData;
     };
 
@@ -264,25 +629,42 @@ const GamesTopup = ({
 
     // Render produk berdasarkan kategori aktif
     const renderProducts = () => {
-        let filteredProducts = products;
+        // Filter produk aktif
+        const activeProducts = productList.filter(
+            (product) =>
+                product.buyer_product_status !== false &&
+                product.seller_product_status !== false
+        );
+
+        // Filter produk tidak aktif
+        const inactiveProducts = productList.filter(
+            (product) =>
+                product.buyer_product_status === false ||
+                product.seller_product_status === false
+        );
+
+        let filteredProducts = activeProducts;
 
         if (activeCategory === "pulsa") {
-            filteredProducts = products.filter((p) => p.category === "Pulsa");
+            filteredProducts = activeProducts.filter(
+                (p) => p.category === "Pulsa"
+            );
         } else if (activeCategory === "data") {
-            filteredProducts = products.filter((p) => p.category === "Data");
+            filteredProducts = activeProducts.filter(
+                (p) => p.category === "Data"
+            );
         } else if (activeCategory !== "all") {
-            // Cari kategori berdasarkan key
             const categoryData = getAvailableCategories().find(
                 (cat) => cat.key === activeCategory
             );
             if (categoryData) {
-                filteredProducts = products.filter(
+                filteredProducts = activeProducts.filter(
                     (p) => p.category === categoryData.label
                 );
             }
         }
 
-        if (filteredProducts.length === 0) {
+        if (filteredProducts.length === 0 && inactiveProducts.length === 0) {
             return (
                 <div className="text-center py-12 text-gray-400">
                     <svg
@@ -299,6 +681,9 @@ const GamesTopup = ({
                         />
                     </svg>
                     <p className="mt-2">Tidak ada produk tersedia</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Silakan coba lagi nanti
+                    </p>
                 </div>
             );
         }
@@ -324,6 +709,21 @@ const GamesTopup = ({
                                 <h4 className="font-semibold text-gray-200 text-lg">
                                     {group.provider}
                                 </h4>
+                                <span
+                                    className="ml-2 text-xs px-2 py-1 rounded-full"
+                                    style={{
+                                        backgroundColor:
+                                            activeCategory === "pulsa"
+                                                ? COLORS.success + "20"
+                                                : COLORS.purple + "20",
+                                        color:
+                                            activeCategory === "pulsa"
+                                                ? COLORS.success
+                                                : COLORS.purple,
+                                    }}
+                                >
+                                    {group.products.length} produk
+                                </span>
                             </div>
                             <div
                                 className={`${
@@ -348,62 +748,106 @@ const GamesTopup = ({
                             </div>
                         </div>
                     ))}
+
+                    {/* Tampilkan produk tidak aktif jika ada */}
+                    {inactiveProducts.length > 0 && (
+                        <div
+                            className="mt-8 pt-6 border-t"
+                            style={{ borderColor: COLORS.secondary }}
+                        >
+                            <div className="flex items-center mb-4">
+                                <h4 className="font-semibold text-gray-400 text-lg">
+                                    Produk Tidak Tersedia
+                                </h4>
+                                <span
+                                    className="ml-2 text-xs px-2 py-1 rounded-full"
+                                    style={{
+                                        backgroundColor: COLORS.error + "20",
+                                        color: COLORS.error,
+                                    }}
+                                >
+                                    {inactiveProducts.length}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                {inactiveProducts.slice(0, 4).map((product) => (
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        selectedProduct={selectedProduct}
+                                        onSelect={setSelectedProduct}
+                                        color={COLORS.accent}
+                                    />
+                                ))}
+                            </div>
+                            {inactiveProducts.length > 4 && (
+                                <div className="text-center mt-4">
+                                    <p className="text-sm text-gray-500">
+                                        + {inactiveProducts.length - 4} produk
+                                        lainnya tidak tersedia
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         }
 
         // Untuk kategori lain, tampilkan langsung tanpa grouping
         return (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
-                    <ProductCard
-                        key={product.id}
-                        product={product}
-                        selectedProduct={selectedProduct}
-                        onSelect={setSelectedProduct}
-                        color={COLORS.accent}
-                    />
-                ))}
-            </div>
-        );
-    };
+            <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filteredProducts.map((product) => (
+                        <ProductCard
+                            key={product.id}
+                            product={product}
+                            selectedProduct={selectedProduct}
+                            onSelect={setSelectedProduct}
+                            color={COLORS.accent}
+                        />
+                    ))}
+                </div>
 
-    // Komponen ProductCard yang reusable
-    const ProductCard = ({ product, selectedProduct, onSelect, color }) => {
-        const isSelected = selectedProduct?.id === product.id;
-
-        return (
-            <div
-                className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:transform hover:-translate-y-1 ${
-                    isSelected
-                        ? "shadow-lg scale-105 border-opacity-100"
-                        : "border-gray-700 hover:border-gray-500 border-opacity-50"
-                }`}
-                onClick={() => onSelect(product)}
-                style={{
-                    backgroundColor: isSelected
-                        ? `${color}20`
-                        : COLORS.secondary,
-                    borderColor: isSelected ? color : "transparent",
-                }}
-            >
-                {isSelected && (
+                {/* Tampilkan produk tidak aktif jika ada */}
+                {inactiveProducts.length > 0 && (
                     <div
-                        className="absolute -top-2 -right-2 text-white text-xs font-bold px-2 py-1 rounded-full"
-                        style={{ backgroundColor: color }}
+                        className="pt-6 border-t"
+                        style={{ borderColor: COLORS.secondary }}
                     >
-                        ✓
-                    </div>
-                )}
-                <div className="font-bold text-gray-100 mb-2 line-clamp-2">
-                    {product.product_name}
-                </div>
-                <div className="text-lg font-bold text-white">
-                    <FormatRupiah value={product.selling_price} />
-                </div>
-                {product.description && (
-                    <div className="text-xs text-gray-400 mt-2 line-clamp-2">
-                        {product.description}
+                        <div className="flex items-center mb-4">
+                            <h4 className="font-semibold text-gray-400 text-lg">
+                                Produk Tidak Tersedia
+                            </h4>
+                            <span
+                                className="ml-2 text-xs px-2 py-1 rounded-full"
+                                style={{
+                                    backgroundColor: COLORS.error + "20",
+                                    color: COLORS.error,
+                                }}
+                            >
+                                {inactiveProducts.length}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {inactiveProducts.slice(0, 4).map((product) => (
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                    selectedProduct={selectedProduct}
+                                    onSelect={setSelectedProduct}
+                                    color={COLORS.accent}
+                                />
+                            ))}
+                        </div>
+                        {inactiveProducts.length > 4 && (
+                            <div className="text-center mt-4">
+                                <p className="text-sm text-gray-500">
+                                    + {inactiveProducts.length - 4} produk
+                                    lainnya tidak tersedia
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -731,7 +1175,7 @@ const GamesTopup = ({
                                 Checking...
                             </>
                         ) : (
-                            "Cek Tagihan PLN"
+                            "Cek Data PLN"
                         )}
                     </button>
                 )}
@@ -955,8 +1399,6 @@ const GamesTopup = ({
         return productPrice + totalFee;
     };
 
-    console.log(calculateTotalPayment());
-
     // Fungsi untuk menghitung total biaya saja
     const calculateTotalFee = () => {
         if (!paymentMethod || !selectedProduct) return 0;
@@ -993,7 +1435,7 @@ const GamesTopup = ({
                 setActiveCategory("data");
             }
         }
-    }, [products]);
+    }, [productList]);
 
     return (
         <AppLayout>
@@ -1036,6 +1478,11 @@ const GamesTopup = ({
                                             : game.description ||
                                               "Top up dengan cepat, aman, dan terpercaya"}
                                     </p>
+                                    {/* Real-time indicator */}
+                                    <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-700/30">
+                                        <span className="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></span>
+                                        Real-time Product Updates
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1096,6 +1543,15 @@ const GamesTopup = ({
                                                     ? "Pilih Token Listrik"
                                                     : "Pilih Nominal"}
                                             </h2>
+                                            {/* Products count */}
+                                            <div className="ml-auto text-sm text-gray-400">
+                                                {getAvailableCategories().reduce(
+                                                    (total, cat) =>
+                                                        total + cat.count,
+                                                    0
+                                                )}{" "}
+                                                produk tersedia
+                                            </div>
                                         </div>
 
                                         {/* Tampilkan tab hanya jika ada produk Pulsa atau Data */}
@@ -1109,10 +1565,14 @@ const GamesTopup = ({
                                                             COLORS.secondary,
                                                     }}
                                                 >
-                                                    {products.some(
+                                                    {productList.some(
                                                         (p) =>
                                                             p.category ===
-                                                            "Pulsa"
+                                                                "Pulsa" &&
+                                                            p.buyer_product_status !==
+                                                                false &&
+                                                            p.seller_product_status !==
+                                                                false
                                                     ) && (
                                                         <button
                                                             type="button"
@@ -1158,12 +1618,16 @@ const GamesTopup = ({
                                                                     }}
                                                                 >
                                                                     {
-                                                                        products.filter(
+                                                                        productList.filter(
                                                                             (
                                                                                 p
                                                                             ) =>
                                                                                 p.category ===
-                                                                                "Pulsa"
+                                                                                    "Pulsa" &&
+                                                                                p.buyer_product_status !==
+                                                                                    false &&
+                                                                                p.seller_product_status !==
+                                                                                    false
                                                                         ).length
                                                                     }
                                                                 </span>
@@ -1181,10 +1645,14 @@ const GamesTopup = ({
                                                         </button>
                                                     )}
 
-                                                    {products.some(
+                                                    {productList.some(
                                                         (p) =>
                                                             p.category ===
-                                                            "Data"
+                                                                "Data" &&
+                                                            p.buyer_product_status !==
+                                                                false &&
+                                                            p.seller_product_status !==
+                                                                false
                                                     ) && (
                                                         <button
                                                             type="button"
@@ -1230,12 +1698,16 @@ const GamesTopup = ({
                                                                     }}
                                                                 >
                                                                     {
-                                                                        products.filter(
+                                                                        productList.filter(
                                                                             (
                                                                                 p
                                                                             ) =>
                                                                                 p.category ===
-                                                                                "Data"
+                                                                                    "Data" &&
+                                                                                p.buyer_product_status !==
+                                                                                    false &&
+                                                                                p.seller_product_status !==
+                                                                                    false
                                                                         ).length
                                                                     }
                                                                 </span>
@@ -1879,7 +2351,7 @@ const GamesTopup = ({
                                                         </>
                                                     ) : (
                                                         <div
-                                                            className="rounded-xl p-6 text-center"
+                                                            className="rounded-xl border border-dashed p-6 text-center"
                                                             style={{
                                                                 backgroundColor:
                                                                     COLORS.primary,
@@ -2202,7 +2674,7 @@ const GamesTopup = ({
                                         </div>
                                     ) : (
                                         <div
-                                            className="rounded-2xl shadow-lg overflow-hidden p-6 py-10"
+                                            className="rounded-2xl border border-dashed shadow-lg overflow-hidden p-6 py-10"
                                             style={{
                                                 backgroundColor: COLORS.primary,
                                                 borderLeft: `2px solid ${COLORS.secondary}`,
@@ -2210,7 +2682,7 @@ const GamesTopup = ({
                                         >
                                             <div>
                                                 <h1
-                                                    className="text-center font-bold"
+                                                    className="text-center white font-bold"
                                                     style={{
                                                         color: COLORS.accent,
                                                     }}

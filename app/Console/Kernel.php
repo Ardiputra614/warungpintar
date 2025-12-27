@@ -13,6 +13,15 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+        $schedule->command('app:retry-digiflazz-cutoff')
+        ->everyFiveMinutes()
+        ->withoutOverlapping()
+        ->runInBackground();
+
+        $schedule->call(function () {
+            app(\App\Services\DigiflazzProductService::class)
+                ->syncStatus();
+        })->everyTenMinutes()->withoutOverlapping();
     }
 
     /**

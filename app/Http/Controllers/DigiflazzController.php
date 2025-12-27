@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Produk;
 use App\Models\ProdukPasca;
+use App\Models\ProfilAplikasi;
 use App\Models\Transaction;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -159,80 +161,152 @@ public function getProductsPasca(Request $request)
 }
     
 public function handleDigiflazz(Request $request)
-{
-    try {
-        // 1. Ambil payload dan signature
-        $payload = $request->getContent();
-        $signatureHeader = $request->header('X-Hub-Signature');
-        
-        if (!$signatureHeader) {
-            Log::warning('DigiFlazz Webhook: Signature missing', ['ip' => $request->ip()]);
-            return response()->json(['error' => 'Unauthorized - Signature missing'], 401);
-        }
+    {
+        try {
+            // =========================
+            // 1️⃣ VALIDASI SIGNATURE
+            // =========================
+            $payload = $request->getContent();
+            $signatureHeader = $request->header('X-Hub-Signature');
 
-        // 2. Verifikasi signature
-        $secret = env('DIGIFLAZZ_WEBHOOK_SECRET');
-        $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
-        
-        if (!hash_equals($expectedSignature, $signatureHeader)) {
-            Log::warning('DigiFlazz Webhook: Invalid signature', [
-                'expected' => $expectedSignature,
-                'received' => $signatureHeader
-            ]);
-            return response()->json(['error' => 'Invalid signature'], 403);
-        }
-
-        // 3. Decode payload
-        $data = json_decode($payload, true);
-        
-        if (!isset($data['data']['ref_id'])) {
-            Log::error('DigiFlazz Webhook: Invalid payload structure', $data);
-            return response()->json(['error' => 'Invalid payload'], 400);
-        }
-
-        Log::info('Webhook DigiFlazz diterima:', $data);
-
-        $trxData = $data['data'];
-        $refId = $trxData['ref_id'];
-        $status = $trxData['status'];
-        $message = $trxData['message'] ?? '';
-        $sku = $trxData['buyer_sku_code'] ?? null;
-        $sn = $trxData['sn'] ?? null;
-
-        // 4. Update transaksi
-        $transaksi = Transaction::where('order_id', $refId)->first();
-        
-        if (!$transaksi) {
-            // Coba cari berdasarkan ref_id juga
-            $transaksi = Transaction::where('ref_id', $refId)->first();
-            
-            if (!$transaksi) {
-                Log::error('DigiFlazz Webhook: Transaksi tidak ditemukan', [
-                    'ref_id' => $refId,
-                    'data' => $trxData
-                ]);
-                return response()->json(['error' => 'Transaksi tidak ditemukan'], 404);
+            if (! $signatureHeader) {
+                Log::warning('DigiFlazz Webhook: Signature missing');
+                return response()->json(['error' => 'Signature missing'], 401);
             }
+
+            $secret = env('DIGIFLAZZ_WEBHOOK_SECRET');
+            $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
+
+            if (! hash_equals($expectedSignature, $signatureHeader)) {
+                Log::warning('DigiFlazz Webhook: Invalid signature', [
+                    'expected' => $expectedSignature,
+                    'received' => $signatureHeader
+                ]);
+                return response()->json(['error' => 'Invalid signature'], 403);
+            }
+
+            // =========================
+            // 2️⃣ PARSE PAYLOAD
+            // =========================
+            $data = json_decode($payload, true);
+
+            if (! isset($data['data']['ref_id'])) {
+                Log::error('Invalid DigiFlazz payload', $data);
+                return response()->json(['error' => 'Invalid payload'], 400);
+            }
+
+            Log::info('📥 Webhook DigiFlazz diterima', $data);
+
+            $trx = $data['data'];
+
+            $refId   = $trx['ref_id'];
+            $status  = $trx['status']; // Sukses | Pending | Gagal
+            $message = $trx['message'] ?? null;
+            $sn      = $trx['sn'] ?? null;
+            $saldo   = $trx['buyer_last_saldo'] ?? null;
+
+            // =========================
+            // 3️⃣ CARI TRANSAKSI
+            // =========================
+            $transaction = Transaction::where('order_id', $refId)
+                ->orWhere('ref_id', $refId)
+                ->first();
+
+            if (! $transaction) {
+                Log::error('Transaksi tidak ditemukan', [
+                    'ref_id' => $refId
+                ]);
+                return response()->json(['error' => 'Transaction not found'], 404);
+            }
+
+            // =========================
+            // 4️⃣ ANTI DOUBLE PROCESS
+            // =========================
+            if ($transaction->digiflazz_status === 'Sukses') {
+                Log::info('⚠️ Webhook diabaikan, sudah sukses', [
+                    'order_id' => $transaction->order_id
+                ]);
+                return response()->json(['message' => 'Already processed']);
+            }
+
+            // =========================
+            // 5️⃣ TRANSACTION DB (AMAN)
+            // =========================
+            DB::transaction(function () use (
+                $transaction,
+                $trx,
+                $status,
+                $message,
+                $sn,
+                $saldo
+            ) {
+                // 🔒 LOCK TRANSAKSI
+                $transaction->refresh();
+                $transaction->lockForUpdate();
+
+                // 🛑 BENAR-BENAR IDEMPOTENT
+                if ($transaction->digiflazz_webhook_at) {
+                    return;
+                }
+
+                // 🔁 UPDATE STATUS
+                if ($status === 'Sukses') {
+                    $transaction->update([
+                        'digiflazz_status' => 'success',
+                        'status_message' => $message,
+                        'serial_number' => $sn,
+                        'digiflazz_response' => $trx,
+                        'completed_at' => now(),
+                        'digiflazz_webhook_at' => now(),
+                    ]);
+                }
+
+                elseif ($status === 'Pending') {
+                    $transaction->update([
+                        'digiflazz_status' => 'pending',
+                        'status_message' => $message,
+                        'digiflazz_response' => $trx,
+                    ]);
+                }
+
+                elseif ($status === 'Gagal') {
+                    $transaction->update([
+                        'digiflazz_status' => 'failed',
+                        'status_message' => $message,
+                        'digiflazz_response' => $trx,
+                        'digiflazz_webhook_at' => now(),
+                    ]);
+                }
+
+                // 💰 SYNC SALDO (ABSOLUT)
+                if ($status === 'Sukses' && $saldo !== null) {
+                    ProfilAplikasi::query()->lockForUpdate()->update([
+                        'saldo' => (int) $saldo
+                    ]);
+                }
+            });
+
+
+            // =========================
+            // 6️⃣ LOG SUKSES
+            // =========================
+            Log::info('✅ Webhook DigiFlazz diproses', [
+                'order_id' => $transaction->order_id,
+                'status' => $status,
+                'saldo' => $saldo
+            ]);
+
+            return response()->json(['success' => true]);
+
+        } catch (\Throwable $e) {
+            Log::error('❌ Error Webhook DigiFlazz', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json(['error' => 'Internal Server Error'], 500);
         }
-
-        // 5. Update data berdasarkan tipe produk
-        $this->updateTransactionData($transaksi, $trxData, $status, $data);
-
-        // 6. Kirim notifikasi
-        if ($transaksi->wa_pembeli) {
-            $this->sendWhatsAppNotification($transaksi, $status, $message);
-        }
-
-        return response()->json(['success' => true, 'message' => 'Webhook processed']);
-        
-    } catch (\Exception $e) {
-        Log::error('Error processing DigiFlazz webhook:', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json(['error' => 'Internal server error'], 500);
     }
-}
 
 /**
  * Update transaction data based on product type

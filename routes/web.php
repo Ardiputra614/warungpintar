@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\DigiflazzProductService;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PagesController;
@@ -33,7 +34,30 @@ Route::get('/test-queue', function () {
     return 'Job dikirim!';
 });
 
-// Route::get('/', [HomeController::class, 'index']);
+
+// Route untuk sync semua produk
+Route::get('/digiflazz/sync', function (DigiflazzProductService $service) {
+    $start = microtime(true);
+    
+    try {
+        $result = $service->syncStatus();
+        
+        return response()->json([
+            'success' => $result,
+            'message' => $result ? 'Sync berhasil' : 'Sync gagal',
+            'execution_time' => round(microtime(true) - $start, 2) . ' seconds',
+            'timestamp' => now()->toDateTimeString(),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage(),
+            'execution_time' => round(microtime(true) - $start, 2) . ' seconds',
+            'timestamp' => now()->toDateTimeString(),
+        ], 500);
+    }
+});
+
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/games', [HomeController::class, 'games'])->name('games');
 Route::get('/history/{orderId}', [HomeController::class, 'history'])->name('history');

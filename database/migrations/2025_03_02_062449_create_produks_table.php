@@ -27,8 +27,8 @@ return new class extends Migration
             $table->boolean('unlimited_stock');
             $table->string('stock');
             $table->boolean('multi');
-            $table->string('start_cut_off');
-            $table->string('end_cut_off');
+            $table->time('start_cut_off');
+            $table->time('end_cut_off');
             $table->string('desc');
             $table->timestamps();
         });

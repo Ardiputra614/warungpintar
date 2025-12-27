@@ -97,6 +97,7 @@ class MidtransController extends Controller
                 'status_message' => $responseData['status_message'],
                 'wa_pembeli' => $request->input('wa_pembeli'),
                 'url' => $this->getPaymentUrlOrVa($responseData),
+                'purchase_price' => $request->input('selling_price'),
                 // Simpan VA number jika ada
                 'va_number' => $this->getPaymentUrlOrVa($responseData, $paymentMethod),
                 'bank' => $paymentMethodName, // Kolom tambahan untuk bank
@@ -141,58 +142,63 @@ class MidtransController extends Controller
     }
 
     public function handle(Request $request)
-{
-    Log::info('📥 Midtrans Webhook received:', $request->all());
+    {
+        Log::info('📥 Midtrans Webhook received:', $request->all());
 
-    $serverKey = config('midtrans.server_key');
-    $signatureKey = hash('sha512',
-        $request->input('order_id') .
-        $request->input('status_code') .
-        $request->input('gross_amount') .
-        $serverKey
-    );
+        $serverKey = config('midtrans.server_key');
+        $signatureKey = hash('sha512',
+            $request->input('order_id') .
+            $request->input('status_code') .
+            $request->input('gross_amount') .
+            $serverKey
+        );
 
-    if ($signatureKey !== $request->input('signature_key')) {
-        Log::warning('🚫 Invalid Signature Key');
-        return response()->json(['message' => 'Invalid Signature'], 403);
+        if ($signatureKey !== $request->input('signature_key')) {
+            Log::warning('🚫 Invalid Signature Key');
+            return response()->json(['message' => 'Invalid Signature'], 403);
+        }
+
+        $orderId = $request->input('order_id');
+        $status = $request->input('transaction_status');
+
+        $order = Transaction::where('order_id', $orderId)->first();
+
+        if (!$order) {
+            Log::warning("⚠️ Transaction with order_id {$orderId} not found");
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
+
+        switch ($status) {
+            case 'settlement':
+                $order->update([
+                    'payment_status' => 'settlement',
+                    'digiflazz_status' => 'processing'
+                ]);
+                // $order->save();
+                // Log::info("dari midtrans:", $order);
+                // Dispatch topup ke DigiFlazz
+                // DigiflazzTopup::dispatch($order);
+                DigiflazzTopup::dispatch($order->id);
+
+                break;
+
+            case 'pending':
+                $order->payment_status = 'pending';
+                $order->save();
+                break;
+
+            case 'cancel':
+            case 'expire':
+                $order->payment_status = 'failed';
+                Cache::forget('transkey_' . $orderId);
+                $order->save();
+                break;
+        }
+
+        Log::info("✅ Transaction {$orderId} updated to payment_status: {$status}");
+
+        return response()->json(['message' => 'Webhook processed'], 200);
     }
-
-    $orderId = $request->input('order_id');
-    $status = $request->input('transaction_status');
-
-    $order = Transaction::where('order_id', $orderId)->first();
-
-    if (!$order) {
-        Log::warning("⚠️ Transaction with order_id {$orderId} not found");
-        return response()->json(['message' => 'Transaction not found'], 404);
-    }
-
-    switch ($status) {
-        case 'settlement':
-            $order->payment_status = 'settlement';
-            $order->save();
-
-            // Dispatch topup ke DigiFlazz
-            DigiflazzTopup::dispatch($order);
-            break;
-
-        case 'pending':
-            $order->payment_status = 'pending';
-            $order->save();
-            break;
-
-        case 'cancel':
-        case 'expire':
-            $order->payment_status = 'failed';
-            Cache::forget('transkey_' . $orderId);
-            $order->save();
-            break;
-    }
-
-    Log::info("✅ Transaction {$orderId} updated to payment_status: {$status}");
-
-    return response()->json(['message' => 'Webhook processed'], 200);
-}
 
 
     public function checkTransactionStatus(Request $request)
