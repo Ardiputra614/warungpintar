@@ -143,7 +143,7 @@ const Footer = ({ aplikasi }) => {
                             {[
                                 { name: "Syarat & Ketentuan", href: "/terms" },
                                 { name: "Kebijakan Privasi", href: "/privacy" },
-                                { name: "FAQ", href: "/faq" },
+                                // { name: "FAQ", href: "/faq" },
                                 // {
                                 //     name: "Cara Pembayaran",
                                 //     href: "/payment-guide",
