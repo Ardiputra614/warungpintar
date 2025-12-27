@@ -14,4 +14,9 @@ class Produk extends Model
     {
         return 'slug';
     }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
 }
