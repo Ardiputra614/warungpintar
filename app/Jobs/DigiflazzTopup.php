@@ -31,7 +31,7 @@ class DigiflazzTopup implements ShouldQueue
     {
         $order = Transaction::with('product')->find($this->orderId);
 
-        if (! $order || $order->digiflazz_status === 'success') {
+        if (! $order || $order->digiflazz_status === 'Sukses') {
             return;
         }
 
@@ -59,8 +59,8 @@ class DigiflazzTopup implements ShouldQueue
                     'customer_no' => $order->customer_no,
                     'ref_id' => $refId,
                     'sign' => md5(
-                        config('services.digiflazz.username') .
-                        config('services.digiflazz.prod_key') .
+                        env('DIGIFLAZZ_USERNAME') .
+                        env('DIGIFLAZZ_PROD_KEY') .
                         $refId
                     ),
                 ]
