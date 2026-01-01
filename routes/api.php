@@ -8,6 +8,7 @@ use App\Http\Controllers\WaSendController;
 use App\Http\Controllers\TopupController;
 use App\Http\Controllers\PaymentMethodController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,7 +39,7 @@ Route::post('/topup/{orderId}', [DigiflazzController::class, 'topup']);
 Route::post('/midtrans/transaction', [MidtransController::class, 'createTransaction']);
 Route::post('/midtrans/webhook', [MidtransController::class, 'handle']);
 Route::get('/transaction/status', [MidtransController::class, 'checkTransactionStatus']);
-Route::post('/webhookdigiflazz', [DigiflazzController::class, 'handleDigiflazz']);
+Route::post('/webhook/digiflazz', [DigiflazzController::class, 'handleDigiflazz']);
 
 
 
@@ -55,3 +56,33 @@ Route::get('payment-method', [PaymentMethodController::class, 'paymentmethodon']
 
 Route::post('/inquiry-pln', [TopupController::class, 'inquiryPln']);
 
+
+Route::post('/ceksaldo', function() {
+    $username = env('DIGIFLAZZ_USERNAME');
+        $apiKey   = env('DIGIFLAZZ_PROD_KEY');
+
+        $sign = md5($username . $apiKey . 'depo');
+
+        $response = Http::timeout(15)->post(
+            'https://api.digiflazz.com/v1/cek-saldo',
+            [
+                'cmd'      => 'depo',
+                'username' => $username,
+                'sign'     => $sign,
+            ]
+        );
+
+        if ($response->failed()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal koneksi ke DigiFlazz',
+                'error' => $response->body(),
+            ], 500);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Koneksi DigiFlazz berhasil',
+            'data' => $response->json(),
+        ]);
+});

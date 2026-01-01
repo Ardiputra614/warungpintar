@@ -40,6 +40,12 @@ class ProfilAplikasiResource extends Resource
                     ->imageEditor()
                     ->disk('public')
                     ->directory('aplikasi'),
+                Forms\Components\RichEditor::make('terms_condition')   
+                    ->nullable()
+                    ->label('Term and Conditions'),
+                Forms\Components\RichEditor::make('privacy_policy')   
+                    ->nullable()
+                    ->label('Privacy Policy'),
             ]);
     }
 
@@ -58,6 +64,7 @@ class ProfilAplikasiResource extends Resource
                 ->disk('public')
                 ->height(50)
                 ->width(50),
+                
             ])
             ->filters([
                 //

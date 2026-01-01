@@ -98,6 +98,7 @@ class MidtransController extends Controller
                 'wa_pembeli' => $request->input('wa_pembeli'),
                 'url' => $this->getPaymentUrlOrVa($responseData),
                 'purchase_price' => $request->input('selling_price'),
+                'product_type' => $request->input('product_type'),
                 // Simpan VA number jika ada
                 'va_number' => $this->getPaymentUrlOrVa($responseData, $paymentMethod),
                 'bank' => $paymentMethodName, // Kolom tambahan untuk bank
@@ -168,6 +169,7 @@ class MidtransController extends Controller
             return response()->json(['message' => 'Transaction not found'], 404);
         }
 
+        if ($order->payment_status != 'settlement') {                
         switch ($status) {
             case 'settlement':
                 $order->update([
@@ -194,6 +196,7 @@ class MidtransController extends Controller
                 $order->save();
                 break;
         }
+        }
 
         Log::info("✅ Transaction {$orderId} updated to payment_status: {$status}");
 
@@ -212,11 +215,13 @@ class MidtransController extends Controller
         }
 
         return response()->json([
-            'status' => $transaction->payment_status,
-            'message' => $transaction->status_message,
-            'payment_type' => $transaction->payment_type,
-            'updated_at' => $transaction->updated_at,
-            'transaction' => $transaction,
+            'status'            => $transaction->payment_status, // midtrans
+            'message'           => $transaction->status_message,
+            'digiflazz_status'  => $transaction->digiflazz_status,
+            'payment_type'      => $transaction->payment_type,
+            'product_type'      => $transaction->product_type, // prepaid | postpaid
+            'serial_number'     => $transaction->serial_number,
+            'updated_at'        => $transaction->updated_at,
         ]);
     }
 }

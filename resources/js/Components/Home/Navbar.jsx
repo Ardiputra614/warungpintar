@@ -1,50 +1,147 @@
-import { Link } from "@inertiajs/react";
-import { Bell, User } from "lucide-react";
+import { Link, usePage } from "@inertiajs/react";
+import { Menu, X, LogIn, UserPlus } from "lucide-react";
+import { useState } from "react";
 
 const Navbar = ({ user }) => {
+    const [open, setOpen] = useState(false);
+    const { url } = usePage();
+
+    const isActive = (path) => {
+        if (path === "/") {
+            return url === "/";
+        }
+        return url.startsWith(path);
+    };
+
+    const menuClass = (path) => {
+        return isActive(path)
+            ? "text-white border-b-2 border-blue-500 pb-1"
+            : "text-gray-300 hover:text-white pb-1";
+    };
+
     return (
-        <>
-            {/* Top Navigation */}
-            <nav className="bg-[#1a191d]">
-                <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex">
-                            <div className="flex-shrink-0 flex items-center">
+        <nav className="bg-[#1a191d] border-b border-gray-800 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between h-16 items-center">
+                    {/* LOGO */}
+                    <Link href="/" className="text-white text-xl font-bold">
+                        {/* ARVE SHOP */}
+                        <img src="/logo.png" className="w-32" alt="ARVE SHOP" />
+                    </Link>
+
+                    {/* MENU DESKTOP */}
+                    <div className="hidden md:flex items-center gap-8">
+                        <Link href="/" className={menuClass("/")}>
+                            Top Up
+                        </Link>
+
+                        <Link
+                            href="/cek-transaksi"
+                            className={menuClass("/cek-transaksi")}
+                        >
+                            Cek Transaksi
+                        </Link>
+                    </div>
+
+                    {/* AUTH DESKTOP */}
+                    <div className="hidden md:flex items-center gap-3">
+                        {user ? (
+                            <Link
+                                href="/dashboard"
+                                className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-white transition"
+                            >
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <>
                                 <Link
-                                    href="/"
-                                    className="text-white text-xl font-bold"
+                                    href="/login"
+                                    className="text-gray-300 hover:text-white transition"
                                 >
-                                    ARVE SHOP
-                                    {/* <img src="/logo.png" /> */}
+                                    Masuk
                                 </Link>
-                            </div>
+                                <Link
+                                    href="/register"
+                                    className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white transition"
+                                >
+                                    Daftar
+                                </Link>
+                            </>
+                        )}
+                    </div>
+
+                    {/* HAMBURGER */}
+                    <button
+                        className="md:hidden text-white"
+                        onClick={() => setOpen(!open)}
+                    >
+                        {open ? <X size={24} /> : <Menu size={24} />}
+                    </button>
+                </div>
+            </div>
+
+            {/* MOBILE MENU */}
+            {open && (
+                <div className="md:hidden bg-[#1a191d] border-t border-gray-800">
+                    <div className="px-4 py-4 space-y-4">
+                        <Link
+                            href="/"
+                            onClick={() => setOpen(false)}
+                            className={
+                                isActive("/")
+                                    ? "block text-white font-semibold"
+                                    : "block text-gray-300"
+                            }
+                        >
+                            Top Up
+                        </Link>
+
+                        <Link
+                            href="/cek-transaksi"
+                            onClick={() => setOpen(false)}
+                            className={
+                                isActive("/cek-transaksi")
+                                    ? "block text-white font-semibold"
+                                    : "block text-gray-300"
+                            }
+                        >
+                            Cek Transaksi
+                        </Link>
+
+                        <div className="border-t border-gray-700 pt-4 space-y-3">
+                            {user ? (
+                                <Link
+                                    href="/dashboard"
+                                    onClick={() => setOpen(false)}
+                                    className="block text-white bg-gray-700 px-4 py-2 rounded-lg"
+                                >
+                                    Dashboard
+                                </Link>
+                            ) : (
+                                <>
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setOpen(false)}
+                                        className="flex items-center gap-2 text-gray-300 hover:text-white"
+                                    >
+                                        <LogIn size={18} />
+                                        Masuk
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        onClick={() => setOpen(false)}
+                                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white"
+                                    >
+                                        <UserPlus size={18} />
+                                        Daftar
+                                    </Link>
+                                </>
+                            )}
                         </div>
-                        {/* <div className="flex items-center">
-                            <div className="ml-3 relative">
-                                <Link
-                                    href={route("profile.edit")}
-                                    className="text-white"
-                                >
-                                    {user?.name}
-                                    <div className="flex items-center gap-4">
-                                        <Bell
-                                            className="text-white"
-                                            size={20}
-                                        />
-                                        <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center">
-                                            <User
-                                                className="text-amber-800"
-                                                size={20}
-                                            />
-                                        </div>
-                                    </div>
-                                </Link>
-                            </div>
-                        </div> */}
                     </div>
                 </div>
-            </nav>
-        </>
+            )}
+        </nav>
     );
 };
 

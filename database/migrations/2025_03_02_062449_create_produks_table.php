@@ -18,9 +18,10 @@ return new class extends Migration
             $table->string('category');
             $table->string('brand');
             $table->string('type');
+            $table->string('product_type'); //prepaid / postpaid, untuk ifelse di transaksi history
             $table->string('seller_name');
             $table->string('price'); //harga digiflazz/harga beli
-            $table->string('selling_price');//harga jual= harga beli yang sudah ditambahkan 1000 rupiah
+            $table->string('selling_price');//harga jual= harga beli yang sudah ditambahkan fee keuntungan
             $table->string('buyer_sku_code');
             $table->string('buyer_product_status');
             $table->boolean('seller_product_status');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\GamesCategory;
+use App\Models\ProfilAplikasi;
 use App\Models\Provider;
 use App\Models\Tagihan;
 use App\Models\Transaction;
@@ -96,4 +97,36 @@ private function getSimilarTransactions($orderId)
             ];
         });
 }
+
+    public function cekTransaksi()
+    {
+        return Inertia::render('Home/CekTransaksi', [
+            'title' => 'Cek Transaksi'
+        ]);
+    }
+
+    public function TermCondition()
+    {
+        return Inertia::render('Home/TermsCondition', [
+            'title' => 'Terms And Condition',
+            'termsCondition' => ProfilAplikasi::select('terms_condition')->first(),
+        ]);
+    }
+
+    public function PrivacyPolicy()
+    {
+        return Inertia::render('Home/PrivacyPolicy', [
+            'title' => 'Privacy Policy',
+            'privacyPolicy' => ProfilAplikasi::select('privacy_policy')->first(),
+        ]);
+    }
+
+    public function contact()
+    {
+        return Inertia::render('Home/Contact', [
+            'title' => 'Contact',            
+        ]);
+    }
+
+
 }

@@ -59,7 +59,14 @@ export default function History({ data, error, orderId }) {
         if (status !== "pending") return;
 
         const timer = setInterval(() => {
-            setTimeLeft((t) => (t <= 1 ? 0 : t - 1));
+            setTimeLeft((t) => {
+                if (t <= 1) {
+                    clearInterval(timer);
+                    setStatus("expired"); // ⬅️ INI KUNCI
+                    return 0;
+                }
+                return t - 1;
+            });
         }, 1000);
 
         return () => clearInterval(timer);
@@ -129,7 +136,8 @@ export default function History({ data, error, orderId }) {
         if (
             !data?.order_id ||
             data.digiflazz_status === "Sukses" ||
-            data.digiflazz_status === "Gagal"
+            data.digiflazz_status === "Gagal" ||
+            status === "expired"
         )
             return;
 
@@ -217,6 +225,12 @@ export default function History({ data, error, orderId }) {
             color: "text-red-500",
             label: "Dibatalkan",
             message: "Transaksi dibatalkan",
+        },
+        expired: {
+            icon: XCircle,
+            color: "text-red-500",
+            label: "Kedaluwarsa",
+            message: "Waktu pembayaran telah habis",
         },
     };
 
@@ -368,6 +382,13 @@ export default function History({ data, error, orderId }) {
                             </div>
                         )}
                     </div>
+
+                    {status === "expired" && (
+                        <div className="mt-4 text-red-400 flex items-center">
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Silakan buat transaksi baru
+                        </div>
+                    )}
 
                     {/* TOKEN/SN SECTION - DITAMBAHKAN */}
                     {data.serial_number && (

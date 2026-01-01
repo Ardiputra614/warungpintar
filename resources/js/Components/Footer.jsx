@@ -21,7 +21,7 @@ const Footer = ({ aplikasi }) => {
         <footer className="bg-gradient-to-br from-[#37353E] to-[#44444E] border-t border-gray-700/50 mt-16">
             <div className="max-w-7xl mx-auto px-4 py-12">
                 {/* Main Footer Content */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 mb-10">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-8 lg:gap-12 mb-10">
                     {/* Brand & Contact - Enhanced */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-3">
@@ -29,10 +29,15 @@ const Footer = ({ aplikasi }) => {
                                 <Zap className="text-white" size={20} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                                <img
+                                    src="/logo.png"
+                                    className="w-20"
+                                    alt="ARVE SHOP"
+                                />
+                                {/* <h2 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                                     ARVE SHOP
-                                </h2>
-                                <p className="text-sm text-gray-400">
+                                </h2> */}
+                                <p className="text-sm text-gray-400 -mt-2">
                                     Top Up & Payment
                                 </p>
                             </div>
@@ -141,8 +146,14 @@ const Footer = ({ aplikasi }) => {
                         </h3>
                         <ul className="space-y-3">
                             {[
-                                { name: "Syarat & Ketentuan", href: "/terms" },
-                                { name: "Kebijakan Privasi", href: "/privacy" },
+                                {
+                                    name: "Syarat & Ketentuan",
+                                    href: "/term-condition",
+                                },
+                                {
+                                    name: "Kebijakan Privasi",
+                                    href: "/privacy-policy",
+                                },
                                 // { name: "FAQ", href: "/faq" },
                                 // {
                                 //     name: "Cara Pembayaran",

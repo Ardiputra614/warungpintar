@@ -1254,6 +1254,7 @@ const GamesTopup = ({
         );
     };
 
+    console.log(selectedProduct);
     const handleSubmit = (e) => {
         e.preventDefault();
 
@@ -1270,6 +1271,8 @@ const GamesTopup = ({
             buyer_sku_code: selectedProduct.buyer_sku_code,
             product_name: selectedProduct.product_name,
             selling_price: selectedProduct.selling_price,
+            purchase_price: selectedProduct.price,
+            product_type: selectedProduct.product_type,
             gross_amount: calculateTotalPayment(),
             fee: calculateTotalFee(),
             paymentMethod: paymentMethod.name,

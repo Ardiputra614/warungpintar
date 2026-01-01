@@ -11,6 +11,7 @@ use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\TopupController;
 use App\Http\Controllers\TransactionController;
 use App\Jobs\DigiflazzTopup;
+use App\Models\Transaction;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -59,13 +60,17 @@ Route::get('/digiflazz/sync', function (DigiflazzProductService $service) {
 });
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/cek-transaksi', [HomeController::class, 'cekTransaksi'])->name('cekTransaksi');
 Route::get('/games', [HomeController::class, 'games'])->name('games');
 Route::get('/history/{orderId}', [HomeController::class, 'history'])->name('history');
 Route::get('/payment/channels', [PaymentController::class, 'getPaymentChannels']);
 Route::post('/payment/create', [PaymentController::class, 'createTransaction']);
-Route::get('/{slug}', [TopupController::class, 'Topup']);
 Route::get('/pascabayar/{slug}', [TopupController::class, 'PascaBayar']);
 Route::get('/providertopup/{slug}/{category}', [TopupController::class, 'ProviderTopup']);
+Route::get('/term-condition', [HomeController::class, 'termCondition']);
+Route::get('/privacy-policy', [HomeController::class, 'privacyPolicy']);
+Route::get('/contact', [HomeController::class, 'contact']);
+
 
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
@@ -104,6 +109,11 @@ Route::get('/page', [PagesController::class, 'index']);
 //     ]);
 // });
 
+Route::get('/coba/get', function() {
+    $d = Transaction::with('produk')->find('1');
+    dd($d);
+});
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -116,4 +126,5 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__ . '/auth.php';
-require __DIR__ . '/api.php';
+
+Route::get('/{slug}', [TopupController::class, 'Topup']);

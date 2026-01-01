@@ -17,7 +17,14 @@ class TopupController extends Controller
 
     public function Topup($slug)
     {
+        // $game = GamesCategory::where('slug', $slug)->first();
         $game = GamesCategory::where('slug', $slug)->first();
+
+        if (!$game) {
+            return abort(404, 'Kategori game tidak ditemukan');
+        }
+
+        
         
         // Ambil semua produk dengan slug yang cocok
         if ($game->category !== 'prabayar') {

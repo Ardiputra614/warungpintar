@@ -29,7 +29,7 @@ class DigiflazzTopup implements ShouldQueue
 
     public function handle()
     {
-        $order = Transaction::with('product')->find($this->orderId);
+        $order = Transaction::find($this->orderId);
 
         if (! $order || $order->digiflazz_status === 'Sukses') {
             return;
@@ -54,7 +54,7 @@ class DigiflazzTopup implements ShouldQueue
             $res = Http::timeout(20)->post(
                 'https://api.digiflazz.com/v1/transaction',
                 [
-                    'username' => config('services.digiflazz.username'),
+                    'username' => env('DIGIFLAZZ_USERNAME'),
                     'buyer_sku_code' => $order->buyer_sku_code,
                     'customer_no' => $order->customer_no,
                     'ref_id' => $refId,
@@ -71,7 +71,7 @@ class DigiflazzTopup implements ShouldQueue
             // ✅ SUKSES
             if (($data['rc'] ?? '') === '00') {
                 $order->update([
-                    'digiflazz_status' => 'success',
+                    'digiflazz_status' => 'Sukses',
                     'status_message' => $data['message'],
                     'digiflazz_response' => $data,
                 ]);
