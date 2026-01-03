@@ -55,10 +55,13 @@ return new class extends Migration
             $table->json('digiflazz_request')->nullable(); // data request ke digiflazz
             $table->json('digiflazz_response')->nullable(); // response dari digiflazz
             $table->json('digiflazz_callback')->nullable(); // data callback/webhook
+            $table->string('digiflazz_flag');
 
             $table->dateTime('retry_at')->nullable();
             $table->integer('retry_count')->default(0);
             $table->string('last_error_code', 10)->nullable();
+            $table->dateTime('saldo_debited_at');
+            $table->dateTime('digiflazz_sent_at');
 
             
             $table->timestamps();

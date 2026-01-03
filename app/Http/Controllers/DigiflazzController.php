@@ -162,7 +162,7 @@ public function getProductsPasca(Request $request)
     ], 500);
 }
     
-public function handleDigiflazz(Request $request)
+    public function handleDigiflazz(Request $request)
     {
         try {
             // =========================
@@ -210,8 +210,7 @@ public function handleDigiflazz(Request $request)
             // =========================
             // 3️⃣ CARI TRANSAKSI
             // =========================
-            $transaction = Transaction::where('order_id', $refId)
-                ->orWhere('ref_id', $refId)
+            $transaction = Transaction::where('ref_id', $refId)
                 ->first();
 
             if (! $transaction) {
@@ -254,7 +253,7 @@ public function handleDigiflazz(Request $request)
                 // 🔁 UPDATE STATUS
                 if ($status === 'Sukses') {
                     $transaction->update([
-                        'digiflazz_status' => 'success',
+                        'digiflazz_status' => 'Sukses',
                         'status_message' => $message,
                         'serial_number' => $sn,
                         'digiflazz_response' => $trx,

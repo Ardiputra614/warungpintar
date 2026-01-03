@@ -19,8 +19,7 @@ class DigiflazzTopup implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $orderId;
-    public int $tries = 5;
-    public int $backoff = 120;
+    public int $tries = 1; // ⛔ queue retry dimatikan
 
     public function __construct(int $orderId)
     {
@@ -29,46 +28,50 @@ class DigiflazzTopup implements ShouldQueue
 
     public function handle()
     {
-        $order = Transaction::find($this->orderId);
-
+        $order = Transaction::with('product')->find($this->orderId);
         if (! $order || $order->digiflazz_status === 'Sukses') {
             return;
         }
 
-        $refId = $order->order_id;
-        $lock = Cache::lock("digiflazz_order_$refId", 300);
-
+        $lock = Cache::lock("digiflazz_{$order->order_id}", 300);
         if (! $lock->get()) return;
 
         try {
-            // ⏰ CUTOFF PRODUK
-            if ($this->isProductCutoff($order->product)) {
-                $this->setPending($order, 'Cutoff produk');
+
+            // ⏰ CUTOFF
+            if ($order->product && $this->isProductCutoff($order->product)) {
+                $this->pending($order, 'Cutoff produk');
                 return;
             }
 
-            // 🔒 DEBIT SALDO
-            DigiflazzBalanceService::debit($order->purchase_price);
+            // 💰 DEBIT SEKALI
+            if (! $order->saldo_debited_at) {
+                DigiflazzBalanceService::debit($order->purchase_price);
+                $order->update(['saldo_debited_at' => now()]);
+            }
+
+            // 🟡 PROCESSING
+            $order->update(['digiflazz_status' => 'processing']);
 
             // 📤 HIT DIGIFLAZZ
             $res = Http::timeout(20)->post(
                 'https://api.digiflazz.com/v1/transaction',
                 [
-                    'username' => env('DIGIFLAZZ_USERNAME'),
+                    'username' => config('services.digiflazz.username'),
                     'buyer_sku_code' => $order->buyer_sku_code,
                     'customer_no' => $order->customer_no,
-                    'ref_id' => $refId,
+                    'ref_id' => $order->order_id,
                     'sign' => md5(
-                        env('DIGIFLAZZ_USERNAME') .
-                        env('DIGIFLAZZ_PROD_KEY') .
-                        $refId
+                        config('services.digiflazz.username') .
+                        config('services.digiflazz.prod_key') .
+                        $order->order_id
                     ),
                 ]
             );
 
             $data = $res->json('data') ?? [];
 
-            // ✅ SUKSES
+            // ✅ SUKSES LANGSUNG
             if (($data['rc'] ?? '') === '00') {
                 $order->update([
                     'digiflazz_status' => 'Sukses',
@@ -78,71 +81,85 @@ class DigiflazzTopup implements ShouldQueue
                 return;
             }
 
-            // ⏳ CUTOFF DIGIFLAZZ
-            if ($this->isApiCutoff($data)) {
+            // ❌ GAGAL PERMANEN
+            if (in_array($data['rc'] ?? '', ['40','41','42'])) {
                 DigiflazzBalanceService::credit($order->purchase_price);
-                $this->setPending($order, $data['message'] ?? 'Cutoff Digiflazz');
+
+                $order->update([
+                    'digiflazz_status' => 'failed',
+                    'status_message' => $data['message'],
+                ]);
                 return;
             }
 
-            throw new \Exception($data['message'] ?? 'Topup gagal');
+            // ⏳ PENDING (MENUNGGU WEBHOOK)
+            $this->pending($order, $data['message'] ?? 'Menunggu Digiflazz');
 
         } catch (\Throwable $e) {
+
+            $this->pending($order, 'Gangguan Digiflazz');
+
+            Log::error('DigiflazzTopup error', [
+                'order_id' => $order->order_id,
+                'error' => $e->getMessage(),
+            ]);
+
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function pending(Transaction $order, string $msg)
+    {
+        $order->increment('retry_count');
+
+        if ($order->retry_count >= 5) {
             DigiflazzBalanceService::credit($order->purchase_price);
 
             $order->update([
                 'digiflazz_status' => 'failed',
-                'status_message' => $e->getMessage(),
+                'status_message' => 'Gagal setelah 5x percobaan',
             ]);
-
-            throw $e;
-
-        } finally {
-            optional($lock)->release();
+            return;
         }
-    }
-
-    // ================= HELPERS =================
-
-    private function isApiCutoff(array $data): bool
-    {
-        return str_contains(strtolower($data['message'] ?? ''), 'cut')
-            || in_array($data['rc'] ?? '', ['58', '66']);
-    }
-
-    private function isProductCutoff($product): bool
-    {
-        if (! $product || ! $product->start_cutoff || ! $product->end_cutoff) {
-            return false;
-        }
-
-        $now = Carbon::now();
-        $start = Carbon::createFromFormat('H:i:s', $product->start_cutoff);
-        $end   = Carbon::createFromFormat('H:i:s', $product->end_cutoff);
-
-        // lintas hari (23:30 - 00:30)
-        if ($start->greaterThan($end)) {
-            return $now->gte($start) || $now->lte($end);
-        }
-
-        return $now->between($start, $end);
-    }
-
-    private function setPending(Transaction $order, string $message): void
-    {
-        $order->increment('retry_count');
 
         $order->update([
             'digiflazz_status' => 'pending',
-            'retry_at' => $this->nextRetry(),
-            'status_message' => $message,
+            'status_message' => $msg,
+            'retry_at' => now()->addMinutes(10),
         ]);
     }
 
-    private function nextRetry(): Carbon
-    {
-        return now()->hour >= 23
-            ? now()->addDay()->setTime(0, 35)
-            : now()->addMinutes(10);
+    private function isProductCutoff($product): bool
+{
+    // ❌ Tidak ada produk / tidak set cutoff
+    if (! $product || ! $product->start_cut_off || ! $product->end_cut_off) {
+        return false;
     }
+
+    // ⏰ WAKTU WIB
+    $now = Carbon::now('Asia/Jakarta');
+
+    $start = Carbon::createFromFormat(
+        'H:i:s',
+        $product->start_cut_off,
+        'Asia/Jakarta'
+    );
+
+    $end = Carbon::createFromFormat(
+        'H:i:s',
+        $product->end_cut_off,
+        'Asia/Jakarta'
+    );
+
+    // 🌙 LINTAS HARI (contoh: 23:30 - 00:30)
+    if ($start->gt($end)) {
+        return $now->gte($start) || $now->lte($end);
+    }
+
+    // ☀️ NORMAL (contoh: 01:00 - 05:00)
+    return $now->between($start, $end);
 }
+
+}
+

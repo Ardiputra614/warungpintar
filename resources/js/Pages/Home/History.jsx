@@ -75,6 +75,10 @@ export default function History({ data, error, orderId }) {
     /* =====================
         POLLING STATUS (FIXED)
     ====================== */
+
+    const [digiflazzStatus, setDigiflazzStatus] = useState(
+        data?.digiflazz_status
+    );
     useEffect(() => {
         // Fungsi untuk check status
         const checkStatus = async () => {
@@ -89,6 +93,7 @@ export default function History({ data, error, orderId }) {
 
                     // Update status
                     setStatus(newStatus);
+                    setDigiflazzStatus(res.data.digiflazz_status);
 
                     // Jika sudah settlement, kembalikan untuk cleanup
                     return newStatus;
@@ -510,14 +515,14 @@ export default function History({ data, error, orderId }) {
                                 </span>
                                 <span
                                     className={`font-semibold ${
-                                        data.digiflazz_status === "Sukses"
+                                        digiflazzStatus === "Sukses"
                                             ? "text-green-400"
-                                            : data.digiflazz_status === "Gagal"
+                                            : digiflazzStatus === "Gagal"
                                             ? "text-red-400"
                                             : "text-yellow-400"
                                     }`}
                                 >
-                                    {data.digiflazz_status || "Menunggu"}
+                                    {digiflazzStatus || "Menunggu"}
                                 </span>
                             </div>
 
@@ -545,18 +550,18 @@ export default function History({ data, error, orderId }) {
                                 </span>
                                 <span
                                     className={`font-semibold ${
-                                        data.payment_status === "settlement"
+                                        status === "settlement"
                                             ? "text-green-400"
-                                            : data.payment_status === "pending"
+                                            : status === "pending"
                                             ? "text-yellow-400"
                                             : "text-red-400"
                                     }`}
                                 >
-                                    {data.payment_status === "settlement"
-                                        ? "Lunas"
-                                        : data.payment_status === "pending"
+                                    {status === "settlement"
+                                        ? "Berhasil"
+                                        : status === "pending"
                                         ? "Menunggu"
-                                        : data.payment_status || "Unknown"}
+                                        : status || "Gagal"}
                                 </span>
                             </div>
                             {/* Total */}

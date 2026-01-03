@@ -2,6 +2,8 @@
 
 namespace App\Console;
 
+use App\Jobs\DigiflazzTopup;
+use App\Models\Transaction;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -25,6 +27,13 @@ class Kernel extends ConsoleKernel
         ->everyTenMinutes()
         ->name('digiflazz-sync-status')
         ->withoutOverlapping();
+
+        $schedule->call(function () {
+            Transaction::where('digiflazz_status', 'pending')
+                ->where('retry_at', '<=', now())
+                ->each(fn ($trx) => DigiflazzTopup::dispatch($trx->id));
+        })->everyMinute();
+
 
     }
 
