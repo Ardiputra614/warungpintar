@@ -19,8 +19,8 @@ class Transaction extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function produk()
+    public function product()
     {
-        return $this->belongsTo(Produk::class);
+        return $this->belongsTo(Product::class);
     }
 }

@@ -29,11 +29,11 @@ class DatabaseSeeder extends Seeder
         //     'email' => 'test@example.com',
         // ]);
 
-        // User::create([
-        //     'name' => 'Arfenaz',
-        //     'email' => 'admin@gmail.com',
-        //     'password' => Hash::make('12345'),
-        // ]);
+        User::create([
+            'name' => 'Arfenaz',
+            'email' => 'admin@gmail.com',
+            'password' => Hash::make('12345'),
+        ]);
 
         ProfilAplikasi::create([
             'application_name' => 'Warung Pintar',

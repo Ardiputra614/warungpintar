@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Produk;
+use App\Models\Product;
 use App\Models\ProdukPasca;
 use App\Models\ProfilAplikasi;
 use App\Models\Transaction;
@@ -54,7 +54,7 @@ class DigiflazzController extends Controller
     // Generate slug dengan null safety
     // $slug = Str::slug($product['brand']);
     
-    Produk::updateOrCreate(
+    Product::updateOrCreate(
         ['buyer_sku_code' => $buyerSkuCode], // INI SUDAH BENAR
         [
             "product_name" => $productName,
@@ -210,7 +210,8 @@ public function getProductsPasca(Request $request)
             // =========================
             // 3️⃣ CARI TRANSAKSI
             // =========================
-            $transaction = Transaction::where('ref_id', $refId)
+            $transaction = Transaction::where('order_id', $refId)
+                ->orWhere('ref_id', $refId)
                 ->first();
 
             if (! $transaction) {
@@ -296,6 +297,8 @@ public function getProductsPasca(Request $request)
                 'status' => $status,
                 'saldo' => $saldo
             ]);
+            
+            WaSend($transaction);
 
             return response()->json(['success' => true]);
 
@@ -308,6 +311,7 @@ public function getProductsPasca(Request $request)
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
     }
+
 
 /**
  * Update transaction data based on product type
@@ -493,6 +497,7 @@ Terima kasih telah menggunakan layanan kami! 😊";
         'target' => $transaksi['wa_pembeli'], // contoh: 6281234567890
         'message' => $template,
     ]);
+    Log::info($response);
 
     return $response->json();
     }

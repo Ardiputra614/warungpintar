@@ -3,9 +3,10 @@
 namespace App\Services;
 
 use App\Events\StatusProduct;
+use App\Models\Product;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Produk;
+
 
 class DigiflazzProductService
 {
@@ -74,7 +75,7 @@ class DigiflazzProductService
                     $skuCode = $item['buyer_sku_code'];
                     
                     // Cek apakah produk ada di database
-                    $produk = Produk::where('buyer_sku_code', $skuCode)->first();
+                    $produk = Product::where('buyer_sku_code', $skuCode)->first();
 
                     if (! $produk) {
                         Log::debug("Produk dengan SKU {$skuCode} tidak ditemukan di database");

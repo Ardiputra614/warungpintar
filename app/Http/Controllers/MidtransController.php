@@ -20,8 +20,8 @@ class MidtransController extends Controller
         $customerNo = $request->input('customer_no');
 
         $item_details = [
-            ['id' => $request->input('id'), 'price' => $request->input('selling_price'), 'quantity' => 1, 'name' => $request->input('product_name')],
-            ['id' => 'fee', 'price' => $request->input('fee'), 'quantity' => 1, 'name' => 'Biaya Admin']
+            ['id' => $request->input('id'), 'price' => (int) $request->input('selling_price'), 'quantity' => 1, 'name' => $request->input('product_name')],
+            ['id' => 'fee', 'price' => (int) $request->input('fee'), 'quantity' => 1, 'name' => 'Biaya Admin']
         ];
 
         $orderId = 'ORD-' . now()->format('YmdHis') . '-' . rand(1000,9999);
@@ -30,7 +30,7 @@ class MidtransController extends Controller
         $transaction_data = [
             'transaction_details' => [
                 'order_id' => $orderId,
-                'gross_amount' => $grossAmount
+                'gross_amount' => (int) $grossAmount
             ],
             'item_details' => $item_details
         ];
@@ -77,7 +77,8 @@ class MidtransController extends Controller
             'Content-Type' => 'application/json',
         ])
         ->withBasicAuth(config('midtrans.server_key'), '')
-        ->post('https://api.sandbox.midtrans.com/v2/charge', $transaction_data);
+        // ->post('https://api.sandbox.midtrans.com/v2/charge', $transaction_data);
+        ->post('https://api.midtrans.com/v2/charge', $transaction_data);
 
         if ($response->successful()) {
             $responseData = $response->json();

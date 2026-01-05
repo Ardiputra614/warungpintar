@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\GamesCategory;
 use App\Models\PaymentMethod;
+use App\Models\Product;
 use App\Models\Produk;
 use App\Models\ProdukPasca;
 use Illuminate\Support\Facades\Http;
@@ -28,7 +29,7 @@ class TopupController extends Controller
         
         // Ambil semua produk dengan slug yang cocok
         if ($game->category !== 'prabayar') {
-            $products = Produk::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
+            $products = Product::where(['slug' => $slug, 'buyer_product_status' => true, 'seller_product_status' => true])
             ->orderByRaw('CAST(selling_price AS DECIMAL(12,2)) ASC')
             ->get();                    
         } else {
@@ -136,7 +137,7 @@ private function getDefaultExample($format)
 
     public function produkwithbrand($brand)
     {        
-        $data = Produk::where('brand', $brand)->orderByRaw('CAST(selling_price AS UNSIGNED) asc')->get();
+        $data = Product::where('brand', $brand)->orderByRaw('CAST(selling_price AS UNSIGNED) asc')->get();
         return response()->json($data);
     }
         

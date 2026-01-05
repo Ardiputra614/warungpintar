@@ -36,6 +36,33 @@ class Kernel extends ConsoleKernel
 
 
     }
+//     protected function schedule(Schedule $schedule): void
+// {
+//     // 🔄 Sync status Digiflazz
+//     $schedule->call(function () {
+//         app(\App\Services\DigiflazzProductService::class)->syncStatus();
+//     })
+//     ->everyTenMinutes()
+//     ->name('digiflazz-sync-status')
+//     ->withoutOverlapping();
+
+//     // 🚀 Dispatch retry Digiflazz (AMAN)
+//     $schedule->call(function () {
+
+//         Transaction::where('digiflazz_status', 'pending')
+//             ->where('retry_at', '<=', now())
+//             ->limit(20)
+//             ->each(function ($trx) {
+//                     DigiflazzTopup::dispatch($trx->id)
+//                         ->onQueue('digiflazz');
+//                 });
+
+//     })
+//     ->everyMinute()
+//     ->name('dispatch-digiflazz-pending')
+//     ->withoutOverlapping();
+// }
+
 
     /**
      * Register the commands for the application.

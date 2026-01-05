@@ -3,20 +3,21 @@
 namespace App\Services;
 
 use App\Models\ProfilAplikasi;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class DigiflazzBalanceService
 {
-    public static function debit(float $amount)
+    public static function debit(int $amount): void
     {
         DB::transaction(function () use ($amount) {
-            $profil = ProfilAplikasi::lockForUpdate()->first();
+            $profile = ProfilAplikasi::lockForUpdate()->first();
 
-            if ($profil->saldo < $amount) {
-                throw new \Exception('Saldo Digiflazz tidak cukup');
+            if ($profile->saldo < $amount) {
+                throw new Exception('Saldo tidak mencukupi');
             }
 
-            $profil->decrement('saldo', $amount);
+            $profile->decrement('saldo', $amount);
         });
     }
 
