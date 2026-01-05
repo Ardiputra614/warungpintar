@@ -13,11 +13,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\WaSendService;
+
 
 class DigiflazzController extends Controller
-{
+{    
+
+    protected WaSendService $wa;
+
+    public function __construct(WaSendService $wa)
+    {
+        $this->wa = $wa;
+    }
+
     public function getProducts(Request $request)
-{
+    {
     $header = ['Content-Type' => 'application/json'];
     $apiUrl = "https://api.digiflazz.com/v1/price-list";
     $apiKey = env('DIGIFLAZZ_PROD_KEY');
@@ -298,7 +308,8 @@ public function getProductsPasca(Request $request)
                 'saldo' => $saldo
             ]);
             
-            WaSend($transaction);
+            $this->wa->WaSend($transaction);
+        
 
             return response()->json(['success' => true]);
 
@@ -425,80 +436,56 @@ private function determineProductType($sku)
 /**
  * Send WhatsApp notification
  */
-private function sendWhatsAppNotification($transaction, $status, $message)
-{
-    try {
-        $statusText = $this->getStatusText($status);
-        $productInfo = $this->getProductInfo($transaction);
+    private function sendWhatsAppNotification($transaction, $status, $message)
+    {
+        try {
+            $statusText = $this->getStatusText($status);
+            $productInfo = $this->getProductInfo($transaction);
+            
+            $message = "🔔 *NOTIFIKASI TRANSAKSI*\n\n" .
+                    "📦 Produk: *{$productInfo}*\n" .
+                    "📱 No Pelanggan: *{$transaction->customer_no}*\n" .
+                    "💰 Harga: Rp " . number_format($transaction->selling_price, 0, ',', '.') . "\n" .
+                    "📋 Status: *{$statusText}*\n" .
+                    "🆔 Ref ID: {$transaction->ref_id}\n";
+            
+            if ($transaction->serial_number) {
+                $message .= "🔑 Serial/Token: *{$transaction->serial_number}*\n";
+            }
+            
+            if ($message) {
+                $message .= "📝 Pesan: {$message}\n";
+            }
+            
+            // Kirim via WhatsApp API
+            $this->sendWA($transaction->wa_pembeli, $message);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send WhatsApp notification:', [
+                'error' => $e->getMessage(),
+                'transaction_id' => $transaction->id
+            ]);
+        }
+    }
+
+    private function getStatusText($status)
+    {
+        $statusMap = [
+            'Sukses' => '✅ BERHASIL',
+            'Gagal' => '❌ GAGAL',
+            'Pending' => '⏳ MENUNGGU',
+            'Processing' => '🔄 PROSES'
+        ];
         
-        $message = "🔔 *NOTIFIKASI TRANSAKSI*\n\n" .
-                  "📦 Produk: *{$productInfo}*\n" .
-                  "📱 No Pelanggan: *{$transaction->customer_no}*\n" .
-                  "💰 Harga: Rp " . number_format($transaction->selling_price, 0, ',', '.') . "\n" .
-                  "📋 Status: *{$statusText}*\n" .
-                  "🆔 Ref ID: {$transaction->ref_id}\n";
-        
-        if ($transaction->serial_number) {
-            $message .= "🔑 Serial/Token: *{$transaction->serial_number}*\n";
+        return $statusMap[$status] ?? $status;
+    }
+
+    private function getProductInfo($transaction)
+    {
+        if ($transaction->product_name) {
+            return $transaction->product_name;
         }
         
-        if ($message) {
-            $message .= "📝 Pesan: {$message}\n";
-        }
-        
-        // Kirim via WhatsApp API
-        $this->sendWA($transaction->wa_pembeli, $message);
-        
-    } catch (\Exception $e) {
-        Log::error('Failed to send WhatsApp notification:', [
-            'error' => $e->getMessage(),
-            'transaction_id' => $transaction->id
-        ]);
-    }
-}
-
-private function getStatusText($status)
-{
-    $statusMap = [
-        'Sukses' => '✅ BERHASIL',
-        'Gagal' => '❌ GAGAL',
-        'Pending' => '⏳ MENUNGGU',
-        'Processing' => '🔄 PROSES'
-    ];
-    
-    return $statusMap[$status] ?? $status;
-}
-
-private function getProductInfo($transaction)
-{
-    if ($transaction->product_name) {
-        return $transaction->product_name;
-    }
-    
-    return $transaction->buyer_sku_code;
-} 
-
-    protected function WaSend($transaksi)
-    {        
-        $template = "✅ Transaksi Berhasil!
-
-Hai, pesanan Anda telah berhasil.
-
-🧾 Produk : {$transaksi['product_name']}
-💳 Nominal : Rp " . number_format($transaksi['gross_amount'], 0, ',', '.') . "
-📱 Nomor Tujuan : {$transaksi['wa_pembeli']}
-🕒 Waktu : {$transaksi['updated_at']}
-
-Terima kasih telah menggunakan layanan kami! 😊";
-
-    $response = Http::withHeaders([
-        'Authorization' => env('FONNTE_TOKEN')
-    ])->post('https://api.fonnte.com/send', [
-        'target' => $transaksi['wa_pembeli'], // contoh: 6281234567890
-        'message' => $template,
-    ]);
-    Log::info($response);
-
-    return $response->json();
-    }
+        return $transaction->buyer_sku_code;
+    }     
 }
