@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GamesCategory;
 use App\Models\ProfilAplikasi;
 use App\Models\Provider;
+use App\Models\Service;
 use App\Models\Tagihan;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class HomeController extends Controller
     {
         return Inertia::render('Home/Index', [
             'title' => 'Warung Pintar',
-            'games' =>  GamesCategory::where('is_active', true)->get(),
+            'games' =>  Service::where('is_active', true)->get(),
             // 'provider' => Provider::all(),
             // 'tagihan' => Tagihan::all(),            
         ]);

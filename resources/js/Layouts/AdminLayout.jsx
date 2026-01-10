@@ -2,7 +2,7 @@ import { Link } from "@inertiajs/react";
 import { LogOut } from "lucide-react";
 import { useState } from "react";
 
-export default function AdminLayout({ user, header, children }) {
+export default function AdminLayout({ children }) {
     // State to manage sidebar visibility
     const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
@@ -26,27 +26,27 @@ export default function AdminLayout({ user, header, children }) {
                 <nav>
                     <ul>
                         <li>
-                            <a
-                                href="#"
+                            <Link
+                                href="/admin/dashboard"
                                 className="block px-6 py-2 text-gray-400 hover:bg-gray-700 hover:text-white"
                             >
                                 Dashboard
-                            </a>
-                        </li>
-                        <li>
-                            <a
-                                href="#"
-                                className="block px-6 py-2 text-gray-400 hover:bg-gray-700 hover:text-white"
-                            >
-                                Users
-                            </a>
+                            </Link>
                         </li>
                         <li>
                             <Link
-                                href="/admin/setting"
+                                href="/admin/service"
                                 className="block px-6 py-2 text-gray-400 hover:bg-gray-700 hover:text-white"
                             >
-                                Settings
+                                Layanan
+                            </Link>
+                        </li>
+                        <li>
+                            <Link
+                                href="/admin/profil-aplikasi"
+                                className="block px-6 py-2 text-gray-400 hover:bg-gray-700 hover:text-white"
+                            >
+                                Profil Aplikasi
                             </Link>
                         </li>
                     </ul>
@@ -96,7 +96,7 @@ export default function AdminLayout({ user, header, children }) {
                 </div>
 
                 {/* <!-- Page Content --> */}
-                <div className="flex-1 p-6 bg-gray-50 overflow-auto">
+                <div className="flex-1 p-6 bg-[#f8f5f2] overflow-auto">
                     {children}
                 </div>
             </div>

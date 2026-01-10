@@ -36,4 +36,11 @@ return [
         'prod_key' => env('DIGIFLAZZ_PROD_KEY'),
     ],
 
+    'wa_engine' => [
+        'url' => env('WA_ENGINE_URL', 'http://localhost:3000'),
+        'api_key' => env('WA_ENGINE_API_KEY'),
+        'max_devices' => env('WA_ENGINE_MAX_DEVICES', 5),
+        'max_messages_per_minute' => env('WA_ENGINE_MAX_MESSAGES_PER_MINUTE', 20),
+    ],
+
 ];

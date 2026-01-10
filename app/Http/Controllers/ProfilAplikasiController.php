@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProfilAplikasi;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ProfilAplikasiController extends Controller
 {
@@ -12,7 +13,16 @@ class ProfilAplikasiController extends Controller
      */
     public function index()
     {
-        //
+        return Inertia::render('Admin/ProfilAplikasi/Index', [
+            'title' => 'PROFIL APLIKASI',
+            'profil' => ProfilAplikasi::first(),
+        ]);
+    }
+
+    public function data()
+    {
+        $profil = ProfilAplikasi::first();
+        return response()->json($profil);
     }
 
     /**

@@ -4,9 +4,11 @@ use App\Http\Controllers\DigiflazzController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\ProdukController;
-use App\Http\Controllers\WaSendController;
 use App\Http\Controllers\TopupController;
 use App\Http\Controllers\PaymentMethodController;
+use App\Http\Controllers\ProfilAplikasiController;
+use App\Http\Controllers\ServiceController;
+use App\Models\ProfilAplikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +28,9 @@ Route::get('/getproduk', [ProdukController::class, 'getProduk']);
 Route::get('/getgames', [KategoriController::class, 'getGames']);
 Route::get('/getprovider', [KategoriController::class, 'getProvider']);
 Route::get('/gettagihan', [KategoriController::class, 'getTagihan']);
+Route::get('/services', [ServiceController::class, 'data']);
+Route::post('/services', [ServiceController::class, 'store']);
+Route::patch('/services/{services}', [ServiceController::class, 'update']);
 
 //untuk getproduk berdasarkan brand
 Route::get('/getproduk/{brand}', [TopupController::class, 'getprodukwithbrand']);
@@ -47,8 +52,6 @@ Route::post('/webhook/digiflazz', [DigiflazzController::class, 'handleDigiflazz'
 Route::post('/dataproduk', [DigiflazzController::class, 'getProducts']);
 Route::post('/dataproduk-pasca', [DigiflazzController::class, 'getProductsPasca']);
 
-//ROute untuk kirim pesan wa after transaksi
-Route::post('wa-send', [WaSendController::class, 'WaSend']);
 
 //route untuk ambil payment method on untuk react-native
 Route::get('payment-method', [PaymentMethodController::class, 'paymentmethodon']);
@@ -86,3 +89,10 @@ Route::post('/ceksaldo', function() {
             'data' => $response->json(),
         ]);
 });
+
+
+
+
+//admin custom
+
+Route::get('/profil-aplikasi', [ProfilAplikasiController::class, 'data']);

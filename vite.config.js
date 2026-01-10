@@ -10,6 +10,10 @@ export default defineConfig({
         }),
         react(),
     ],
+    define: {
+        "process.env": {},
+        "process.browser": true,
+    },
 
     //ini tambahan
     build: {

@@ -3,7 +3,10 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        "start": "vite --host",
+        "wa-engine": "node storage/app/wa-engine/server.js",
+        "wa-engine:dev": "nodemon storage/app/wa-engine/server.js"
     },
     "devDependencies": {
         "@headlessui/react": "^1.7.19",
@@ -20,11 +23,22 @@
         "vite": "^5.4.19"
     },
     "dependencies": {
+        "@adiwajshing/keyed-db": "^0.2.4",
         "@grapesjs/studio-sdk": "^1.0.32",
         "@heroicons/react": "^2.2.0",
+        "@whiskeysockets/baileys": "^7.0.0-rc.9",
+        "cors": "^2.8.5",
+        "express": "^5.2.1",
         "git": "^0.1.5",
         "laravel-echo": "^1.19.0",
         "lucide-react": "^0.475.0",
-        "pusher-js": "^8.4.0"
+        "pino": "^10.1.1",
+        "pusher-js": "^8.4.0",
+        "qrcode": "^1.5.4",
+        "qrcode-terminal": "^0.12.0",
+        "recharts": "^3.6.0",
+        "socket.io": "^4.8.3",
+        "socket.io-client": "^4.8.3",
+        "whatsapp-web.js": "^1.34.4"
     }
 }

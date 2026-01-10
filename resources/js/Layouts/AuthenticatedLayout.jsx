@@ -45,10 +45,16 @@ export default function Authenticated({ user, header, children }) {
                                     Transaction
                                 </NavLink>
                                 <NavLink
-                                    href={route("provider.index")}
-                                    active={route().current("provider.index")}
+                                    href={route("service.index")}
+                                    active={route().current("service.index")}
                                 >
-                                    Providers
+                                    Service
+                                </NavLink>
+                                <NavLink
+                                    href={route("whatsapp.index")}
+                                    active={route().current("whatsapp.index")}
+                                >
+                                    Whatsapp Engine
                                 </NavLink>
                             </div>
                         </div>

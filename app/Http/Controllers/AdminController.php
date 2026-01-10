@@ -11,10 +11,16 @@ use Illuminate\Support\Str;
 class AdminController extends Controller
 {
     public function index() {
-        return Inertia::render('Admin/Dashboard');
+        return Inertia::render('Admin/Dashboard', [
+            'title' => 'ADMIN PANEL'
+        ]);
     }
 
     public function setting() {
         return Inertia::render('Admin/Setting');
+    }    
+
+    public function wa() {
+        return Inertia::render('Admin/Whatsapp/Index');
     }    
 }
