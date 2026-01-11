@@ -13,6 +13,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Debug FTP Connection
+        run: |
+          echo "=== Testing FTP Connection ==="
+          echo "FTP Server: ${{ secrets.FTP_SERVER }}"
+          
+          # Test DNS resolution
+          echo "DNS Test:"
+          nslookup ${{ secrets.FTP_SERVER }} || echo "DNS Failed"
+          
+          # Test port 21
+          echo "Port Test (21):"
+          timeout 5 bash -c "echo > /dev/tcp/${{ secrets.FTP_SERVER }}/21" && \
+            echo "✓ Port 21 is open" || \
+            echo "✗ Cannot connect to port 21"
+          
+          # Test FTP connection with curl
+          echo "FTP Test:"
+          curl -v --ftp-pasv "ftp://${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}@${{ secrets.FTP_SERVER }}/" 2>&1 | head -20
+
       - name: Deploy to Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
@@ -27,3 +46,6 @@ jobs:
             vendor/**
             storage/**
             .env
+          # Tambahkan ini untuk debugging:
+          log-level: verbose
+          dry-run: true  # Set FALSE setelah berhasil
