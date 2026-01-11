@@ -45,7 +45,7 @@ class WaSendService
                 'device_id' => $availableDevice['id'],
                 'target' => $this->formatPhone($transaction->wa_pembeli),
                 'message' => $template,
-                'delay' => rand(2000, 5000) // Random delay
+                'delay' => rand(4000, 10000) // Random delay
             ]);
 
         if ($response->successful()) {
