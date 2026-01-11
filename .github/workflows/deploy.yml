@@ -1,51 +1,166 @@
-name: Deploy Website
+name: Deploy Website to VPS
 
 on:
   push:
     branches:
       - main
+  # Optional: Bisa tambahkan manual trigger
+  workflow_dispatch:
 
 jobs:
-  web-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
+    
     steps:
+      # Step 1: Checkout repository
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
+      # Step 2: Debug connection (optional, bisa dihapus setelah berhasil)
       - name: Debug FTP Connection
+        if: false  # Set true untuk debugging, false untuk production
         run: |
-          echo "=== Testing FTP Connection ==="
-          echo "FTP Server: ${{ secrets.FTP_SERVER }}"
+          echo "=== Debug Information ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          echo "Testing FTP server: ${{ secrets.FTP_SERVER }}"
           
           # Test DNS resolution
-          echo "DNS Test:"
-          nslookup ${{ secrets.FTP_SERVER }} || echo "DNS Failed"
+          echo "1. DNS Resolution Test:"
+          nslookup ${{ secrets.FTP_SERVER }} 2>&1 | grep -A2 "Server:" || echo "DNS lookup failed"
           
-          # Test port 21
-          echo "Port Test (21):"
-          timeout 5 bash -c "echo > /dev/tcp/${{ secrets.FTP_SERVER }}/21" && \
-            echo "✓ Port 21 is open" || \
-            echo "✗ Cannot connect to port 21"
+          # Test port connectivity
+          echo -e "\n2. Port 21 Test:"
+          if timeout 3 bash -c "cat < /dev/null > /dev/tcp/${{ secrets.FTP_SERVER }}/21" 2>/dev/null; then
+            echo "✅ Port 21 is reachable"
+          else
+            echo "❌ Cannot connect to port 21"
+          fi
           
-          # Test FTP connection with curl
-          echo "FTP Test:"
-          curl -v --ftp-pasv "ftp://${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}@${{ secrets.FTP_SERVER }}/" 2>&1 | head -20
+          # List directory structure
+          echo -e "\n3. Listing FTP root directory:"
+          curl -s --user "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" \
+            "ftp://${{ secrets.FTP_SERVER }}/" 2>/dev/null | head -10 || echo "Failed to list directory"
 
-      - name: Deploy to Server
+      # Step 3: Deploy via FTP
+      - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
+          # Server configuration
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /
-          exclude: |
-            **/.git*
-            **/.github/**
-            node_modules/**
-            vendor/**
-            storage/**
-            .env
-          # Tambahkan ini untuk debugging:
+          
+          # Directory configuration
+          server-dir: /wwwroot/arveshop.web.id/  # SESUAIKAN PATH INI!
+          local-dir: ./  # Upload semua file dari root repository
+          
+          # FTP settings
+          protocol: ftp
+          port: 21
+          security: false  # true untuk FTPS/SSL
+          
+          # Deployment options
+          dry-run: false  # Set true untuk test, false untuk deploy sebenarnya
           log-level: verbose
-          dry-run: true  # Set FALSE setelah berhasil
+          
+          # State management (untuk incremental upload)
+          state-name: .ftp-deploy-sync-state.json
+          
+          # Exclude patterns
+          exclude: |
+            **/.git/**
+            **/.github/**
+            **/.gitignore
+            **/.gitmodules
+            **/.gitattributes
+            
+            # Development files
+            **/node_modules/**
+            **/vendor/**
+            **/.env
+            **/.env.*
+            **/storage/**
+            **/tests/**
+            
+            # IDE files
+            **/.vscode/**
+            **/.idea/**
+            **/*.swp
+            **/*.swo
+            
+            # Logs and cache
+            **/*.log
+            **/cache/**
+            **/tmp/**
+            
+            # OS files
+            **/.DS_Store
+            **/Thumbs.db
+            
+            # Documentation
+            **/README.md
+            **/LICENSE
+            **/CHANGELOG.md
+            
+            # Build files (jika ada)
+            **/dist/**
+            **/build/**
+            **/*.min.js
+            **/*.min.css
+            
+            # Custom exclusions untuk project Anda
+            **/composer.json
+            **/composer.lock
+            **/package.json
+            **/package-lock.json
+            **/yarn.lock
+            **/webpack.config.js
+            
+          # Include patterns (opsional, override exclude)
+          # include: |
+          #   **/*.php
+          #   **/*.html
+          #   **/*.css
+          #   **/*.js
+          #   **/*.jpg
+          #   **/*.png
+          
+          # Advanced options
+          dangerous-clean-slate: false  # HATI-HATI! Ini akan hapus semua file di server
+          sftp: false  # true untuk menggunakan SFTP
+            
+      # Step 4: Post-deployment actions
+      - name: Verify Deployment
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Timestamp: $(date)"
+          echo "Repository: ${{ github.repository }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed to: ${{ secrets.FTP_SERVER }}/wwwroot/arveshop.web.id/"
+          
+      # Step 5: Notifications (optional)
+      - name: Send Discord Notification
+        if: success()
+        uses: appleboy/discord-action@0.1.0
+        with:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          color: "65280"  # Green
+          username: "GitHub Deploy Bot"
+          message: "✅ **Deployment Successful**\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}\nBy: ${{ github.actor }}\nTime: $(date -u)"
+          
+      - name: Send Discord Notification (Failure)
+        if: failure()
+        uses: appleboy/discord-action@0.1.0
+        with:
+          webhook_id: ${{ secrets.DISCORD_WEBHOOK_ID }}
+          webhook_token: ${{ secrets.DISCORD_WEBHOOK_TOKEN }}
+          color: "16711680"  # Red
+          username: "GitHub Deploy Bot"
+          message: "❌ **Deployment Failed**\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nError: Check workflow logs\nBy: ${{ github.actor }}"
