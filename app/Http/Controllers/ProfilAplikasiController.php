@@ -61,8 +61,9 @@ class ProfilAplikasiController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, ProfilAplikasi $profilAplikasi)
-    {
-        //
+    {        
+        $data = $profilAplikasi->update($request->all());        
+        return response()->json($data);
     }
 
     /**

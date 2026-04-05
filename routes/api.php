@@ -29,8 +29,9 @@ Route::get('/getgames', [KategoriController::class, 'getGames']);
 Route::get('/getprovider', [KategoriController::class, 'getProvider']);
 Route::get('/gettagihan', [KategoriController::class, 'getTagihan']);
 Route::get('/services', [ServiceController::class, 'data']);
-Route::post('/services', [ServiceController::class, 'store']);
-Route::patch('/services/{services}', [ServiceController::class, 'update']);
+// Route::post('/services', [ServiceController::class, 'store']);
+// Route::patch('/services/{id}', [ServiceController::class, 'update']);
+// Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
 //untuk getproduk berdasarkan brand
 Route::get('/getproduk/{brand}', [TopupController::class, 'getprodukwithbrand']);
@@ -74,6 +75,12 @@ Route::post('/ceksaldo', function() {
                 'sign'     => $sign,
             ]
         );
+
+        if ($response->successful()) {
+            ProfilAplikasi::where('id', 1)->update([
+                'saldo' => $response['saldo'],
+            ]);
+        }
 
         if ($response->failed()) {
             return response()->json([

@@ -45,6 +45,12 @@ export default function Authenticated({ user, header, children }) {
                                     Transaction
                                 </NavLink>
                                 <NavLink
+                                    href={route("category.index")}
+                                    active={route().current("category.index")}
+                                >
+                                    Category
+                                </NavLink>
+                                <NavLink
                                     href={route("service.index")}
                                     active={route().current("service.index")}
                                 >
@@ -55,6 +61,14 @@ export default function Authenticated({ user, header, children }) {
                                     active={route().current("whatsapp.index")}
                                 >
                                     Whatsapp Engine
+                                </NavLink>
+                                <NavLink
+                                    href={route("profil-aplikasi.index")}
+                                    active={route().current(
+                                        "profil-aplikasi.index"
+                                    )}
+                                >
+                                    PROFIL APLIKASI
                                 </NavLink>
                             </div>
                         </div>
@@ -159,6 +173,42 @@ export default function Authenticated({ user, header, children }) {
                             active={route().current("dashboard")}
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route("payment-method.index")}
+                            active={route().current("payment-method.index")}
+                        >
+                            Payment method
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route("transaction.index")}
+                            active={route().current("transaction.index")}
+                        >
+                            Transaction
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route("category.index")}
+                            active={route().current("category.index")}
+                        >
+                            Category
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route("service.index")}
+                            active={route().current("service.index")}
+                        >
+                            Service
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route("whatsapp.index")}
+                            active={route().current("whatsapp.index")}
+                        >
+                            Whatsapp Engine
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route("profil-aplikasi.index")}
+                            active={route().current("profil-aplikasi.index")}
+                        >
+                            PROFIL APLIKASI
                         </ResponsiveNavLink>
                     </div>
 

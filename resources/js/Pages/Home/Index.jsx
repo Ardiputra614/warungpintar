@@ -32,32 +32,31 @@ import Pulsa from "./Pulsa";
 import Data from "./Data";
 import PLN from "./Tagihan";
 
-const Index = ({ games }) => {
+const Index = ({ services, categories }) => {
     const [orderId, setOrderId] = useState("");
-    const [kategori, setKategori] = useState("Games");
+    const [kategori, setKategori] = useState(categories[0]?.id || null);
 
-    const gamesCategory = games.filter(
-        (g) => g.category.toLowerCase() === kategori.toLowerCase()
-    );
+    // Debug
+    console.log("Selected kategori:", kategori);
+    console.log("Categories:", categories);
+    console.log("Services sample:", services[0]);
 
-    const services = [
-        {
-            name: "Top Up Game",
-            value: "Games",
-        },
-        {
-            name: "Pulsa & Data",
-            value: "Provider",
-        },
-        {
-            name: "Token Listrik",
-            value: "PLN",
-        },
-        {
-            name: "Pascabayar",
-            value: "Pascabayar",
-        },
-    ];
+    // Filter services berdasarkan category_id yang dipilih
+    const servicesData = services.filter((service) => {
+        // Cek beberapa kemungkinan field
+        const serviceCategoryId =
+            service.category_id || service.category?.id || service.kategori;
+        console.log(
+            `Service: ${
+                service.name
+            }, Category ID: ${serviceCategoryId}, Match: ${
+                serviceCategoryId == kategori
+            }`
+        );
+        return serviceCategoryId == kategori; // Gunakan == untuk handle string vs number
+    });
+
+    console.log("Filtered services count:", servicesData.length);
 
     const [activePromo, setActivePromo] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
@@ -134,18 +133,6 @@ const Index = ({ games }) => {
                     {/* Promo Carousel */}
                     <div ref={promoRef} className="mb-12">
                         <div className="flex justify-between items-center mb-6">
-                            {/* <div>
-                                <h2 className="text-2xl font-bold text-[#D3DAD9] flex items-center gap-2">
-                                    <Sparkles
-                                        className="text-yellow-400"
-                                        size={24}
-                                    />
-                                    Promo Spesial Hari Ini
-                                </h2>
-                                <p className="text-gray-300">
-                                    Diskon eksklusif untuk Anda
-                                </p>
-                            </div> */}
                             <div className="flex gap-2">
                                 {promos.map((_, idx) => (
                                     <button
@@ -174,13 +161,6 @@ const Index = ({ games }) => {
                                     }`}
                                 >
                                     <div className="absolute inset-0 bg-black/40"></div>
-                                    {/* <div className="absolute top-6 left-8">
-                                        <span
-                                            className={`${promo.badgeColor} text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg`}
-                                        >
-                                            {promo.badge}
-                                        </span>
-                                    </div> */}
                                     <div className="absolute top-6 right-8">
                                         {promo.icon}
                                     </div>
@@ -191,18 +171,6 @@ const Index = ({ games }) => {
                                         <p className="text-gray-200 mb-6">
                                             {promo.description}
                                         </p>
-                                        {/* <button
-                                            className="bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all flex items-center gap-2 border border-white/20 hover:border-white/30"
-                                            style={{
-                                                backgroundColor:
-                                                    promo.accentColor + "20",
-                                                borderColor:
-                                                    promo.accentColor + "40",
-                                            }}
-                                        >
-                                            {promo.cta}
-                                            <ArrowRight size={18} />
-                                        </button> */}
                                     </div>
                                 </div>
                             ))}
@@ -212,7 +180,7 @@ const Index = ({ games }) => {
             </div>
 
             {/* Main Content */}
-            <div className="container mx-auto px-4 pb-16 bg-[#37353E]">
+            <div className="container mx-auto px-4 bg-[#37353E]">
                 {/* Services Section */}
                 <div className="mb-12">
                     <div className="flex justify-between items-center mb-8">
@@ -227,21 +195,18 @@ const Index = ({ games }) => {
                     </div>
 
                     <div className="flex overflow-auto whitespace-nowrap">
-                        {services.map((service, index) => (
+                        {categories.map((category) => (
                             <button
-                                key={index}
-                                onClick={() => setKategori(service.value)}
+                                key={category.id}
+                                onClick={() => setKategori(category.id)}
                                 className={`${
-                                    service.value.toLocaleLowerCase() ===
-                                    kategori.toLowerCase()
-                                        ? "bg-black"
-                                        : ""
+                                    category.id === kategori ? "bg-black" : ""
                                 } flex-shrink-0 px-3 py-2 mx-2 rounded-2xl transition-all duration-300 hover:scale-[1.02] border-2 flex flex-col items-center text-center group backdrop-blur-sm`}
                             >
                                 <h3
                                     className={`font-bold text-lg mb-2 text-white whitespace-nowrap`}
                                 >
-                                    {service.name}
+                                    {category.name}
                                 </h3>
                             </button>
                         ))}
@@ -250,42 +215,31 @@ const Index = ({ games }) => {
 
                 {/* Dynamic Content */}
                 <div className="mb-12">
-                    {kategori && (
+                    {servicesData.length > 0 ? (
                         <Games
-                            games={gamesCategory}
-                            title="Top Up Game Populer"
+                            games={servicesData}
+                            title={`${
+                                categories.find((c) => c.id == kategori)
+                                    ?.name || "Layanan"
+                            } Populer`}
                             layout="grid"
                             columns={4}
                             className="dark-mode"
                         />
-                    )}
-                    {/* {kategori === "Pulsa" && (
-                        <Pulsa
-                            games={providerCategory}
-                            title="Pulsa & Paket Data"
-                            layout="card"
-                            className="dark-mode"
-                        />
-                    )}
-                    {kategori === "PLN" && (
-                        <PLN
-                            PLN={PLNCategory}
-                            title="Token Listrik & PLN"
-                            className="dark-mode"
-                        />
-                    )}
-                    {kategori === "Lainnya" && (
+                    ) : (
                         <div className="text-center py-12 bg-[#44444E] rounded-3xl border border-gray-700/50">
                             <ShoppingBag className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-[#D3DAD9] mb-2">
-                                Layanan Lainnya Segera Hadir
+                                Belum ada layanan
                             </h3>
                             <p className="text-gray-400">
-                                Kami sedang menyiapkan layanan terbaik untuk
-                                Anda
+                                Tidak ada layanan untuk kategori "
+                                {categories.find((c) => c.id == kategori)
+                                    ?.name || "kategori ini"}
+                                "
                             </p>
                         </div>
-                    )} */}
+                    )}
                 </div>
             </div>
         </AppLayout>

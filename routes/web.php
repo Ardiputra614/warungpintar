@@ -2,6 +2,7 @@
 
 use App\Services\DigiflazzProductService;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\PaymentController;
@@ -14,6 +15,8 @@ use App\Http\Controllers\TopupController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WhatsappController;
 use App\Jobs\DigiflazzTopup;
+use App\Models\Category;
+use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\Whatsapp;
 use Illuminate\Foundation\Application;
@@ -144,8 +147,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::resource('provider', ProviderController::class);
         Route::resource('profil-aplikasi', ProfilAplikasiController::class);
         Route::resource('service', ServiceController::class);
-        // Route::get('/whatsapp', [AdminController::class, 'wa'])->name('whatsapp');
+        Route::resource('category', CategoryController::class);
+        Route::resource('services', ServiceController::class);        
         Route::resource('whatsapp', WhatsappController::class);
+        
         Route::get('/transactions/chart-data', [TransactionController::class, 'chartData']);
         
     });

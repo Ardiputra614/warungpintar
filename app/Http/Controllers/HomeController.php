@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\GamesCategory;
 use App\Models\ProfilAplikasi;
 use App\Models\Provider;
@@ -15,14 +16,29 @@ use Inertia\Inertia;
 class HomeController extends Controller
 {
     public function index()
-    {
-        return Inertia::render('Home/Index', [
-            'title' => 'Warung Pintar',
-            'games' =>  Service::where('is_active', true)->get(),
-            // 'provider' => Provider::all(),
-            // 'tagihan' => Tagihan::all(),            
-        ]);
-    }
+{
+    return Inertia::render('Home/Index', [
+        'title' => 'Warung Pintar',
+        'services' => Service::with(['category'])
+            ->where('is_active', true)
+            ->select(['id', 'name', 'slug', 'logo', 'category_id', 'created_at'])
+            ->get()
+            ->map(function($service) {
+                return [
+                    'id' => $service->id,
+                    'name' => $service->name,
+                    'slug' => $service->slug,
+                    'logo' => $service->logo,
+                    'category_id' => $service->category_id, // Pastikan ada
+                    'category' => $service->category ? $service->category->name : null,                                        
+                    'created_at' => $service->created_at,
+                ];
+            }),
+        'categories' => Category::where('status', true)
+            ->select(['id', 'name'])
+            ->get(),
+    ]);
+}
 
     public function games()
     {

@@ -2,42 +2,34 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Authenticated from "@/Layouts/AuthenticatedLayout";
 
-export default function Index({ auth, title }) {
+export default function Index({ auth, title, categories }) {
     const [services, setServices] = useState([]);
     const [search, setSearch] = useState("");
-
-    const [showModal, setShowModal] = useState(false);
-    const [editingId, setEditingId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-
+    const [showModal, setShowModal] = useState(false);
+    const [editingId, setEditingId] = useState(null);
     const [errors, setErrors] = useState({});
     const [success, setSuccess] = useState("");
     const [error, setError] = useState("");
-
     const [logoPreview, setLogoPreview] = useState(null);
     const [iconPreview, setIconPreview] = useState(null);
+    const [removeLogo, setRemoveLogo] = useState(false);
+    const [removeIcon, setRemoveIcon] = useState(false);
 
     const initialForm = {
         name: "",
-        slug: "",
-        category: "",
+        category_id: "",
         customer_no_format: "satu_input",
-        example_format: "",
-
         field1_label: "User ID",
         field1_placeholder: "Masukkan User ID",
-
         field2_label: "",
         field2_placeholder: "",
-
         description: "",
         how_to_topup: "",
         notes: "",
-
         is_active: true,
         is_popular: false,
-
         logo: null,
         icon: null,
     };
@@ -47,27 +39,21 @@ export default function Index({ auth, title }) {
     /* ================= FETCH ================= */
     const fetchServices = async (q = "") => {
         setLoading(true);
-        const res = await axios.get("/api/services", {
-            params: { search: q },
-        });
-        setServices(res.data);
-        setLoading(false);
+        try {
+            const res = await axios.get("/api/services", {
+                params: { search: q },
+            });
+            setServices(res.data.data || res.data);
+        } catch (err) {
+            setError("Gagal mengambil data services");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         fetchServices();
     }, []);
-
-    /* ================= AUTO SLUG ================= */
-    useEffect(() => {
-        setForm((prev) => ({
-            ...prev,
-            slug: prev.name
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/(^-|-$)/g, ""),
-        }));
-    }, [form.name]);
 
     /* ================= HANDLE CHANGE ================= */
     const handleChange = (e) => {
@@ -75,21 +61,23 @@ export default function Index({ auth, title }) {
 
         if (type === "file") {
             const file = files[0];
-            setForm({ ...form, [name]: file });
+            setForm((prev) => ({ ...prev, [name]: file }));
 
             if (name === "logo" && file) {
                 setLogoPreview(URL.createObjectURL(file));
+                setRemoveLogo(false);
             }
             if (name === "icon" && file) {
                 setIconPreview(URL.createObjectURL(file));
+                setRemoveIcon(false);
             }
             return;
         }
 
-        setForm({
-            ...form,
+        setForm((prev) => ({
+            ...prev,
             [name]: type === "checkbox" ? checked : value,
-        });
+        }));
     };
 
     /* ================= MODAL ================= */
@@ -99,18 +87,33 @@ export default function Index({ auth, title }) {
         setErrors({});
         setLogoPreview(null);
         setIconPreview(null);
+        setRemoveLogo(false);
+        setRemoveIcon(false);
         setShowModal(true);
     };
 
     const openEditModal = (item) => {
         setForm({
-            ...item,
+            name: item.name || "",
+            category_id: item.category_id || "",
+            customer_no_format: item.customer_no_format || "satu_input",
+            field1_label: item.field1_label || "User ID",
+            field1_placeholder: item.field1_placeholder || "Masukkan User ID",
+            field2_label: item.field2_label || "",
+            field2_placeholder: item.field2_placeholder || "",
+            description: item.description || "",
+            how_to_topup: item.how_to_topup || "",
+            notes: item.notes || "",
+            is_active: item.is_active ?? true,
+            is_popular: item.is_popular ?? false,
             logo: null,
             icon: null,
         });
         setEditingId(item.id);
-        setLogoPreview(item.logo_url || null);
-        setIconPreview(item.icon_url || null);
+        setLogoPreview(item.logo ? `/storage/${item.logo}` : null);
+        setIconPreview(item.icon ? `/storage/${item.icon}` : null);
+        setRemoveLogo(false);
+        setRemoveIcon(false);
         setErrors({});
         setShowModal(true);
     };
@@ -122,6 +125,25 @@ export default function Index({ auth, title }) {
         setErrors({});
         setLogoPreview(null);
         setIconPreview(null);
+        setRemoveLogo(false);
+        setRemoveIcon(false);
+    };
+
+    /* ================= DELETE ================= */
+    const handleDelete = async (id) => {
+        if (!confirm("Apakah Anda yakin ingin menghapus service ini?")) {
+            return;
+        }
+
+        try {
+            await axios.delete(`/admin/services/${id}`);
+            setSuccess("Service berhasil dihapus");
+            setTimeout(() => setSuccess(""), 3000);
+            fetchServices(search);
+        } catch (err) {
+            setError(err.response?.data?.message || "Gagal menghapus service");
+            setTimeout(() => setError(""), 3000);
+        }
     };
 
     /* ================= SUBMIT ================= */
@@ -135,85 +157,186 @@ export default function Index({ auth, title }) {
         try {
             const data = new FormData();
 
+            // Append form data
             Object.keys(form).forEach((key) => {
                 if (key === "is_active" || key === "is_popular") {
                     data.append(key, form[key] ? 1 : 0);
-                } else if (form[key] !== null && form[key] !== "") {
-                    data.append(key, form[key]);
+                } else if (form[key] !== null && form[key] !== undefined) {
+                    if (key === "logo" || key === "icon") {
+                        // Append file jika ada (baik untuk create maupun edit)
+                        if (form[key] instanceof File) {
+                            data.append(key, form[key]);
+                        } else if (form[key] === null && editingId) {
+                            // Untuk edit mode, jika file null, jangan append apa-apa
+                            // (biarkan backend handle existing file)
+                        }
+                    } else {
+                        // Untuk field text, append jika ada value
+                        if (form[key] !== "") {
+                            data.append(key, form[key]);
+                        }
+                    }
                 }
             });
 
+            // Append remove flags for edit mode
             if (editingId) {
-                await axios.patch(`/api/services/${editingId}`, data);
-                setSuccess("Service berhasil diperbarui");
-            } else {
-                await axios.post("/api/services", data);
-                setSuccess("Service berhasil ditambahkan");
+                if (removeLogo) {
+                    data.append("remove_logo", "1");
+                    console.log("Removing logo flag sent");
+                }
+                if (removeIcon) {
+                    data.append("remove_icon", "1");
+                    console.log("Removing icon flag sent");
+                }
             }
 
+            console.log("Form data being sent:");
+            for (let pair of data.entries()) {
+                console.log(pair[0] + ": ", pair[1]);
+            }
+
+            let response;
+            if (editingId) {
+                response = await axios.post(
+                    `/admin/services/${editingId}?_method=PATCH`,
+                    data,
+                    {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
+                    }
+                );
+                console.log("Update response:", response.data);
+                setSuccess(
+                    response.data.message || "Service berhasil diperbarui"
+                );
+            } else {
+                response = await axios.post("/admin/services", data, {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                });
+                console.log("Create response:", response.data);
+                setSuccess(
+                    response.data.message || "Service berhasil ditambahkan"
+                );
+            }
+
+            setTimeout(() => setSuccess(""), 3000);
             closeModal();
             fetchServices(search);
         } catch (err) {
+            console.error("Error submitting form:", err);
             if (err.response?.status === 422) {
-                setErrors(err.response.data.errors);
+                setErrors(err.response.data.errors || {});
+                // Scroll to top of modal to show errors
+                const modalContent = document.querySelector(".overflow-y-auto");
+                if (modalContent) {
+                    modalContent.scrollTop = 0;
+                }
             } else {
-                setError("Terjadi kesalahan sistem");
+                setError(
+                    err.response?.data?.message || "Terjadi kesalahan sistem"
+                );
             }
         } finally {
             setSubmitting(false);
         }
     };
 
+    /* ================= NOTIFICATION COMPONENT ================= */
+    const Notification = ({ type, message, onClose }) => (
+        <div
+            className={`fixed top-4 right-4 z-50 max-w-sm w-full ${
+                type === "success"
+                    ? "bg-green-50 border-green-500"
+                    : "bg-red-50 border-red-500"
+            } border-l-4 p-4 rounded-r shadow-lg`}
+        >
+            <div className="flex items-center">
+                <div className="flex-shrink-0">
+                    {type === "success" ? (
+                        <svg
+                            className="h-5 w-5 text-green-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                            />
+                        </svg>
+                    ) : (
+                        <svg
+                            className="h-5 w-5 text-red-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                clipRule="evenodd"
+                            />
+                        </svg>
+                    )}
+                </div>
+                <div className="ml-3">
+                    <p
+                        className={`text-sm ${
+                            type === "success"
+                                ? "text-green-700"
+                                : "text-red-700"
+                        }`}
+                    >
+                        {message}
+                    </p>
+                </div>
+                <div className="ml-auto pl-3">
+                    <button
+                        onClick={onClose}
+                        className={`inline-flex ${
+                            type === "success"
+                                ? "text-green-500 hover:text-green-700"
+                                : "text-red-500 hover:text-red-700"
+                        }`}
+                    >
+                        <span className="sr-only">Close</span>
+                        <svg
+                            className="h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                fillRule="evenodd"
+                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                clipRule="evenodd"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <Authenticated user={auth.user}>
             <div className="p-6 space-y-6">
                 {/* Notifications */}
                 {success && (
-                    <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <svg
-                                    className="h-5 w-5 text-green-500"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                >
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                            </div>
-                            <div className="ml-3">
-                                <p className="text-sm text-green-700">
-                                    {success}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    <Notification
+                        type="success"
+                        message={success}
+                        onClose={() => setSuccess("")}
+                    />
                 )}
-
                 {error && (
-                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r">
-                        <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                                <svg
-                                    className="h-5 w-5 text-red-500"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                >
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                            </div>
-                            <div className="ml-3">
-                                <p className="text-sm text-red-700">{error}</p>
-                            </div>
-                        </div>
-                    </div>
+                    <Notification
+                        type="error"
+                        message={error}
+                        onClose={() => setError("")}
+                    />
                 )}
 
                 {/* Header */}
@@ -235,14 +358,13 @@ export default function Index({ auth, title }) {
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg"
                         >
                             <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth="2"
                                 d="M12 4v16m8-8H4"
-                            ></path>
+                            />
                         </svg>
                         Tambah Service
                     </button>
@@ -259,20 +381,23 @@ export default function Index({ auth, title }) {
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
-                                        xmlns="http://www.w3.org/2000/svg"
                                     >
                                         <path
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
                                             strokeWidth="2"
                                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                        ></path>
+                                        />
                                     </svg>
                                 </div>
                                 <input
                                     type="text"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
+                                    onKeyPress={(e) =>
+                                        e.key === "Enter" &&
+                                        fetchServices(search)
+                                    }
                                     placeholder="Cari service..."
                                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 />
@@ -297,6 +422,12 @@ export default function Index({ auth, title }) {
                                         scope="col"
                                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     >
+                                        Logo
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    >
                                         Nama Service
                                     </th>
                                     <th
@@ -310,12 +441,6 @@ export default function Index({ auth, title }) {
                                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                     >
                                         Status
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                    >
-                                        Popular
                                     </th>
                                     <th
                                         scope="col"
@@ -345,12 +470,12 @@ export default function Index({ auth, title }) {
                                                         r="10"
                                                         stroke="currentColor"
                                                         strokeWidth="4"
-                                                    ></circle>
+                                                    />
                                                     <path
                                                         className="opacity-75"
                                                         fill="currentColor"
                                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                    ></path>
+                                                    />
                                                 </svg>
                                             </div>
                                         </td>
@@ -367,14 +492,13 @@ export default function Index({ auth, title }) {
                                                     fill="none"
                                                     stroke="currentColor"
                                                     viewBox="0 0 24 24"
-                                                    xmlns="http://www.w3.org/2000/svg"
                                                 >
                                                     <path
                                                         strokeLinecap="round"
                                                         strokeLinejoin="round"
                                                         strokeWidth="2"
                                                         d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                                                    ></path>
+                                                    />
                                                 </svg>
                                                 <p className="text-lg font-medium text-gray-400">
                                                     Tidak ada data service
@@ -393,43 +517,45 @@ export default function Index({ auth, title }) {
                                             className="hover:bg-gray-50 transition-colors duration-150"
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10">
-                                                        {service.logo_url ? (
-                                                            <img
-                                                                className="h-10 w-10 rounded-md object-cover"
-                                                                src={
-                                                                    service.logo_url
-                                                                }
-                                                                alt={
+                                                <div className="flex-shrink-0 h-10 w-10">
+                                                    {service.logo ? (
+                                                        <img
+                                                            className="h-10 w-10 rounded-md object-cover"
+                                                            src={`/storage/${service.logo}`}
+                                                            alt={service.name}
+                                                            onError={(e) => {
+                                                                e.target.onerror =
+                                                                    null;
+                                                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                                                                     service.name
-                                                                }
-                                                            />
-                                                        ) : (
-                                                            <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center">
-                                                                <span className="text-blue-600 font-semibold text-sm">
-                                                                    {service.name
-                                                                        .charAt(
-                                                                            0
-                                                                        )
-                                                                        .toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                                                )}&background=3b82f6&color=fff`;
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center">
+                                                            <span className="text-blue-600 font-semibold text-sm">
+                                                                {service.name
+                                                                    .charAt(0)
+                                                                    .toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {service.name}
                                                     </div>
-                                                    <div className="ml-4">
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {service.name}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">
-                                                            {service.slug}
-                                                        </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {service.slug}
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                    {service.category}
+                                                    {service.category?.name ??
+                                                        "-"}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -445,18 +571,7 @@ export default function Index({ auth, title }) {
                                                         : "Nonaktif"}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {service.is_popular ? (
-                                                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                        Popular
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">
-                                                        -
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                                                 <button
                                                     onClick={() =>
                                                         openEditModal(service)
@@ -468,16 +583,36 @@ export default function Index({ auth, title }) {
                                                         fill="none"
                                                         stroke="currentColor"
                                                         viewBox="0 0 24 24"
-                                                        xmlns="http://www.w3.org/2000/svg"
                                                     >
                                                         <path
                                                             strokeLinecap="round"
                                                             strokeLinejoin="round"
                                                             strokeWidth="2"
                                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                        ></path>
+                                                        />
                                                     </svg>
                                                     Edit
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleDelete(service.id)
+                                                    }
+                                                    className="text-red-600 hover:text-red-900 inline-flex items-center px-3 py-1 border border-red-600 rounded-md hover:bg-red-50 transition-colors duration-150"
+                                                >
+                                                    <svg
+                                                        className="w-4 h-4 mr-1"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                        />
+                                                    </svg>
+                                                    Hapus
                                                 </button>
                                             </td>
                                         </tr>
@@ -486,35 +621,12 @@ export default function Index({ auth, title }) {
                             </tbody>
                         </table>
                     </div>
-
-                    {services.length > 0 && (
-                        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm text-gray-500">
-                                    Menampilkan{" "}
-                                    <span className="font-medium">
-                                        {services.length}
-                                    </span>{" "}
-                                    service
-                                </div>
-                                <div className="flex space-x-2">
-                                    <button className="px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                        Sebelumnya
-                                    </button>
-                                    <button className="px-3 py-1 text-sm border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                        Selanjutnya
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                {/* MODAL - Design Improved */}
+                {/* MODAL */}
                 {showModal && (
                     <div className="fixed inset-0 z-50 overflow-y-auto">
                         <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                            {/* Background Overlay */}
                             <div
                                 className="fixed inset-0 transition-opacity"
                                 aria-hidden="true"
@@ -522,7 +634,6 @@ export default function Index({ auth, title }) {
                                 <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
                             </div>
 
-                            {/* Modal Content */}
                             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
                                 {/* Header */}
                                 <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
@@ -542,33 +653,21 @@ export default function Index({ auth, title }) {
                                                 fill="none"
                                                 stroke="currentColor"
                                                 viewBox="0 0 24 24"
-                                                xmlns="http://www.w3.org/2000/svg"
                                             >
                                                 <path
                                                     strokeLinecap="round"
                                                     strokeLinejoin="round"
                                                     strokeWidth="2"
                                                     d="M6 18L18 6M6 6l12 12"
-                                                ></path>
+                                                />
                                             </svg>
                                         </button>
                                     </div>
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Lengkapi form berikut untuk{" "}
-                                        {editingId
-                                            ? "memperbarui"
-                                            : "menambahkan"}{" "}
-                                        service
-                                    </p>
                                 </div>
 
                                 {/* Form */}
-                                <form
-                                    onSubmit={handleSubmit}
-                                    className="bg-white"
-                                >
+                                <form onSubmit={handleSubmit}>
                                     <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-                                        {/* Error Messages */}
                                         {Object.keys(errors).length > 0 && (
                                             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
                                                 <h4 className="text-sm font-medium text-red-800 mb-2">
@@ -578,9 +677,16 @@ export default function Index({ auth, title }) {
                                                     {Object.entries(errors).map(
                                                         ([field, messages]) => (
                                                             <li key={field}>
-                                                                {messages.join(
-                                                                    ", "
-                                                                )}
+                                                                <strong>
+                                                                    {field}:
+                                                                </strong>{" "}
+                                                                {Array.isArray(
+                                                                    messages
+                                                                )
+                                                                    ? messages.join(
+                                                                          ", "
+                                                                      )
+                                                                    : messages}
                                                             </li>
                                                         )
                                                     )}
@@ -588,8 +694,8 @@ export default function Index({ auth, title }) {
                                             </div>
                                         )}
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {/* Basic Information */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {/* Left Column */}
                                             <div className="space-y-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -608,51 +714,55 @@ export default function Index({ auth, title }) {
                                                     />
                                                     {errors.name && (
                                                         <p className="mt-1 text-sm text-red-600">
-                                                            {errors.name[0]}
+                                                            {errors.name}
                                                         </p>
                                                     )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Slug
-                                                    </label>
-                                                    <input
-                                                        value={form.slug}
-                                                        disabled
-                                                        className="block w-full px-3 py-2 border border-gray-300 bg-gray-50 rounded-md shadow-sm sm:text-sm text-gray-500"
-                                                    />
-                                                    <p className="mt-1 text-xs text-gray-500">
-                                                        Slug otomatis dibuat
-                                                        dari nama
-                                                    </p>
                                                 </div>
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                                         Kategori *
                                                     </label>
-                                                    <input
-                                                        name="category"
-                                                        value={form.category}
+                                                    <select
+                                                        name="category_id"
+                                                        value={form.category_id}
                                                         onChange={handleChange}
-                                                        placeholder="Contoh: Game, Voucher, etc"
                                                         className={`block w-full px-3 py-2 border ${
-                                                            errors.category
+                                                            errors.category_id
                                                                 ? "border-red-300"
                                                                 : "border-gray-300"
                                                         } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
-                                                    />
-                                                    {errors.category && (
+                                                    >
+                                                        <option value="">
+                                                            Pilih Kategori
+                                                        </option>
+                                                        {categories.map(
+                                                            (category) => (
+                                                                <option
+                                                                    key={
+                                                                        category.id
+                                                                    }
+                                                                    value={
+                                                                        category.id
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        category.name
+                                                                    }
+                                                                </option>
+                                                            )
+                                                        )}
+                                                    </select>
+                                                    {errors.category_id && (
                                                         <p className="mt-1 text-sm text-red-600">
-                                                            {errors.category[0]}
+                                                            {errors.category_id}
                                                         </p>
                                                     )}
                                                 </div>
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Format Input Customer
+                                                        Format Input Customer *
                                                     </label>
                                                     <select
                                                         name="customer_no_format"
@@ -663,46 +773,101 @@ export default function Index({ auth, title }) {
                                                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                     >
                                                         <option value="satu_input">
-                                                            Satu Input
+                                                            Satu Input (User ID)
                                                         </option>
                                                         <option value="dua_input">
-                                                            Dua Input
+                                                            Dua Input (User ID +
+                                                            Server ID)
                                                         </option>
                                                     </select>
                                                 </div>
                                             </div>
 
-                                            {/* File Uploads */}
+                                            {/* Right Column - File Uploads */}
                                             <div className="space-y-4">
+                                                {/* Logo Upload */}
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Logo Service
+                                                        Logo Service{" "}
+                                                        {editingId && (
+                                                            <span className="text-gray-500 text-xs">
+                                                                (Opsional)
+                                                            </span>
+                                                        )}
                                                     </label>
                                                     <div className="flex items-center space-x-4">
                                                         <div className="flex-shrink-0">
                                                             {logoPreview ? (
-                                                                <img
-                                                                    src={
-                                                                        logoPreview
-                                                                    }
-                                                                    alt="Logo preview"
-                                                                    className="h-16 w-16 rounded-md object-cover"
-                                                                />
+                                                                <div className="relative">
+                                                                    <img
+                                                                        src={
+                                                                            logoPreview
+                                                                        }
+                                                                        alt="Logo preview"
+                                                                        className="h-20 w-20 rounded-md object-cover border"
+                                                                        onError={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.target.onerror =
+                                                                                null;
+                                                                            e.target.src =
+                                                                                "https://via.placeholder.com/80?text=Logo";
+                                                                        }}
+                                                                    />
+                                                                    {editingId && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                console.log(
+                                                                                    "Remove logo clicked"
+                                                                                );
+                                                                                setLogoPreview(
+                                                                                    null
+                                                                                );
+                                                                                setRemoveLogo(
+                                                                                    true
+                                                                                );
+                                                                                // Clear file input
+                                                                                const fileInput =
+                                                                                    document.querySelector(
+                                                                                        'input[name="logo"]'
+                                                                                    );
+                                                                                if (
+                                                                                    fileInput
+                                                                                )
+                                                                                    fileInput.value =
+                                                                                        "";
+                                                                            }}
+                                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                                                        >
+                                                                            <svg
+                                                                                className="w-3 h-3"
+                                                                                fill="currentColor"
+                                                                                viewBox="0 0 20 20"
+                                                                            >
+                                                                                <path
+                                                                                    fillRule="evenodd"
+                                                                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                                    clipRule="evenodd"
+                                                                                />
+                                                                            </svg>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             ) : (
-                                                                <div className="h-16 w-16 rounded-md bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                                                <div className="h-20 w-20 rounded-md bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
                                                                     <svg
                                                                         className="h-8 w-8 text-gray-400"
                                                                         fill="none"
                                                                         stroke="currentColor"
                                                                         viewBox="0 0 24 24"
-                                                                        xmlns="http://www.w3.org/2000/svg"
                                                                     >
                                                                         <path
                                                                             strokeLinecap="round"
                                                                             strokeLinejoin="round"
                                                                             strokeWidth="2"
                                                                             d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                                        ></path>
+                                                                        />
                                                                     </svg>
                                                                 </div>
                                                             )}
@@ -719,41 +884,84 @@ export default function Index({ auth, title }) {
                                                             />
                                                             <p className="mt-1 text-xs text-gray-500">
                                                                 Format: JPG,
-                                                                PNG. Maks: 2MB
+                                                                PNG, GIF, WEBP.
+                                                                Maks: 2MB
                                                             </p>
+                                                            {editingId && (
+                                                                <p className="mt-1 text-xs text-gray-500">
+                                                                    Biarkan
+                                                                    kosong jika
+                                                                    tidak ingin
+                                                                    mengubah
+                                                                    logo
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
 
+                                                {/* Icon Upload */}
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Icon Service
+                                                        Icon Service{" "}
+                                                        {editingId && (
+                                                            <span className="text-gray-500 text-xs">
+                                                                (Opsional)
+                                                            </span>
+                                                        )}
                                                     </label>
                                                     <div className="flex items-center space-x-4">
                                                         <div className="flex-shrink-0">
                                                             {iconPreview ? (
-                                                                <img
-                                                                    src={
-                                                                        iconPreview
-                                                                    }
-                                                                    alt="Icon preview"
-                                                                    className="h-16 w-16 rounded-md object-cover"
-                                                                />
+                                                                <div className="relative">
+                                                                    <img
+                                                                        src={
+                                                                            iconPreview
+                                                                        }
+                                                                        alt="Icon preview"
+                                                                        className="h-20 w-20 rounded-md object-cover border"
+                                                                    />
+                                                                    {editingId && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setIconPreview(
+                                                                                    null
+                                                                                );
+                                                                                setRemoveIcon(
+                                                                                    true
+                                                                                );
+                                                                            }}
+                                                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                                                                        >
+                                                                            <svg
+                                                                                className="w-3 h-3"
+                                                                                fill="currentColor"
+                                                                                viewBox="0 0 20 20"
+                                                                            >
+                                                                                <path
+                                                                                    fillRule="evenodd"
+                                                                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                                                    clipRule="evenodd"
+                                                                                />
+                                                                            </svg>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             ) : (
-                                                                <div className="h-16 w-16 rounded-md bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                                                <div className="h-20 w-20 rounded-md bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
                                                                     <svg
                                                                         className="h-8 w-8 text-gray-400"
                                                                         fill="none"
                                                                         stroke="currentColor"
                                                                         viewBox="0 0 24 24"
-                                                                        xmlns="http://www.w3.org/2000/svg"
                                                                     >
                                                                         <path
                                                                             strokeLinecap="round"
                                                                             strokeLinejoin="round"
                                                                             strokeWidth="2"
                                                                             d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-                                                                        ></path>
+                                                                        />
                                                                     </svg>
                                                                 </div>
                                                             )}
@@ -770,7 +978,8 @@ export default function Index({ auth, title }) {
                                                             />
                                                             <p className="mt-1 text-xs text-gray-500">
                                                                 Format: JPG,
-                                                                PNG. Maks: 2MB
+                                                                PNG, GIF, WEBP.
+                                                                Maks: 2MB
                                                             </p>
                                                         </div>
                                                     </div>
@@ -832,7 +1041,7 @@ export default function Index({ auth, title }) {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Label Field 1
+                                                        Label Field 1 *
                                                     </label>
                                                     <input
                                                         name="field1_label"
@@ -840,13 +1049,16 @@ export default function Index({ auth, title }) {
                                                             form.field1_label
                                                         }
                                                         onChange={handleChange}
-                                                        placeholder="Contoh: User ID"
-                                                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                        className={`block w-full px-3 py-2 border ${
+                                                            errors.field1_label
+                                                                ? "border-red-300"
+                                                                : "border-gray-300"
+                                                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                        Placeholder Field 1
+                                                        Placeholder Field 1 *
                                                     </label>
                                                     <input
                                                         name="field1_placeholder"
@@ -854,8 +1066,11 @@ export default function Index({ auth, title }) {
                                                             form.field1_placeholder
                                                         }
                                                         onChange={handleChange}
-                                                        placeholder="Contoh: Masukkan User ID"
-                                                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                                        className={`block w-full px-3 py-2 border ${
+                                                            errors.field1_placeholder
+                                                                ? "border-red-300"
+                                                                : "border-gray-300"
+                                                        } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                                                     />
                                                 </div>
                                             </div>
@@ -875,7 +1090,6 @@ export default function Index({ auth, title }) {
                                                             onChange={
                                                                 handleChange
                                                             }
-                                                            placeholder="Contoh: Server ID"
                                                             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                         />
                                                     </div>
@@ -891,7 +1105,6 @@ export default function Index({ auth, title }) {
                                                             onChange={
                                                                 handleChange
                                                             }
-                                                            placeholder="Contoh: Masukkan Server ID"
                                                             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                         />
                                                     </div>
@@ -909,7 +1122,6 @@ export default function Index({ auth, title }) {
                                                     name="description"
                                                     value={form.description}
                                                     onChange={handleChange}
-                                                    placeholder="Deskripsi singkat tentang service..."
                                                     rows="3"
                                                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 />
@@ -923,7 +1135,6 @@ export default function Index({ auth, title }) {
                                                     name="how_to_topup"
                                                     value={form.how_to_topup}
                                                     onChange={handleChange}
-                                                    placeholder="Petunjuk cara melakukan topup..."
                                                     rows="3"
                                                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 />
@@ -937,7 +1148,6 @@ export default function Index({ auth, title }) {
                                                     name="notes"
                                                     value={form.notes}
                                                     onChange={handleChange}
-                                                    placeholder="Catatan tambahan untuk service..."
                                                     rows="3"
                                                     className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                                 />
@@ -974,33 +1184,19 @@ export default function Index({ auth, title }) {
                                                                 r="10"
                                                                 stroke="currentColor"
                                                                 strokeWidth="4"
-                                                            ></circle>
+                                                            />
                                                             <path
                                                                 className="opacity-75"
                                                                 fill="currentColor"
                                                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                            ></path>
+                                                            />
                                                         </svg>
                                                         Menyimpan...
                                                     </>
+                                                ) : editingId ? (
+                                                    "Perbarui Service"
                                                 ) : (
-                                                    <>
-                                                        <svg
-                                                            className="-ml-1 mr-2 h-4 w-4"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                        >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth="2"
-                                                                d="M5 13l4 4L19 7"
-                                                            ></path>
-                                                        </svg>
-                                                        Simpan Service
-                                                    </>
+                                                    "Simpan Service"
                                                 )}
                                             </button>
                                         </div>

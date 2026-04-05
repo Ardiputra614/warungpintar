@@ -7,6 +7,7 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Produk;
 use App\Models\ProdukPasca;
+use App\Models\Service;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
@@ -17,9 +18,8 @@ class TopupController extends Controller
 {   
 
     public function Topup($slug)
-    {
-        // $game = GamesCategory::where('slug', $slug)->first();
-        $game = GamesCategory::where('slug', $slug)->first();
+    {        
+        $game = Service::where('slug', $slug)->first();
 
         if (!$game) {
             return abort(404, 'Kategori game tidak ditemukan');
@@ -57,7 +57,7 @@ class TopupController extends Controller
 
     public function PascaBayar($slug)
     {
-        $game = GamesCategory::where('slug', $slug)->first();
+        $game = Service::where('slug', $slug)->first();
         
         // Ambil semua produk dengan slug yang cocok
         // if ($game->category !== 'prabayar') {
